@@ -10,6 +10,7 @@ import {
   Alert,
 } from "react-native";
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Feather from "@react-native-vector-icons/feather";
 import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
@@ -37,36 +38,49 @@ export default function SignupScreen({ navigation }) {
   }, []);
 
   // ✅ Normal Signup
-  const handleSignup = async () => {
-    if (!name || !email || !password || !confirm) {
-      Alert.alert("Error", "Please fill all fields");
-      return;
+const handleSignup = async () => {
+  if (!name || !email || !password || !confirm) {
+    Alert.alert("Error", "Please fill all fields");
+    return;
+  }
+
+  if (password !== confirm) {
+    Alert.alert("Error", "Passwords do not match");
+    return;
+  }
+
+  try {
+    const res = await signupUser({
+      name,
+      email,
+      username: email,
+      password,
+      phoneNumber: "9999999999",
+      dob: "2000-01-01",
+    });
+
+    if (res.data.success) {
+      // 🔥 Token save
+      await AsyncStorage.setItem("token", res.data.token);
+
+      // 🔥 User save (important)
+      await AsyncStorage.setItem("user", JSON.stringify(res.data.user));      Alert.alert("Success", "Account Created ✅");
+
+      navigation.replace("MainApp");
     }
 
-    if (password !== confirm) {
-      Alert.alert("Error", "Passwords do not match");
-      return;
-    }
+  }catch (error) {
 
-    try {
-      const res = await signupUser({
-        name,
-        email,
-        username: email,
-        password,
-        phoneNumber: "9999999999",
-        dob: "2000-01-01",
-      });
+    // 🔥 ADD THIS HERE 👇
+    console.log("FULL ERROR:", error);
+    console.log("BACKEND ERROR:", error.response?.data);
 
-      if (res.data.success) {
-  await setToken(res.data.token); // 🔥 save token
-  navigation.replace("MainApp");
-      }
-    } catch (error) {
-      console.log(error.response?.data || error.message);
-      Alert.alert("Error", "Signup failed");
-    }
-  };
+    Alert.alert(
+      "Error",
+      JSON.stringify(error.response?.data || error.message)
+    );
+  }
+};
 
   // 🔥 GOOGLE SIGNUP
   const handleGoogleSignup = async () => {
