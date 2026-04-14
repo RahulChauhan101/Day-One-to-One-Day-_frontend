@@ -1,4 +1,3 @@
-//Login screen
 import React, { useState } from "react";
 import {
   View,
@@ -14,15 +13,13 @@ import {
   ScrollView,
   Linking,
 } from "react-native";
+
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import SocialButton from "../components/SocialButton";
 import Feather from "@react-native-vector-icons/feather";
-import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
-import FontAwesome from "react-native-vector-icons/FontAwesome";
 import API from "../services/api";
 import { setToken } from "../utils/storage";
 import { loginUser } from "../services/auth";
-
-
 
 const COLORS = {
   primary: "#F35539",
@@ -36,29 +33,43 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const users = [
-    { email: "t123", password: "123123" },
-  ];
+  // ✅ LOGIN FUNCTION
 const handleLogin = async () => {
+  if (!email || !password) {
+    return Alert.alert("Error", "Please enter email and password");
+  }
+
   try {
+    console.log("Sending:", { email, password });
+
     const res = await loginUser({ email, password });
 
+    console.log("Response:", res.data);
+
     if (res.data.success) {
+      await setToken(res.data.token);
+      // 🔥 USER SAVE
+await AsyncStorage.setItem("user", JSON.stringify(res.data.user));
       navigation.replace("MainApp");
+    } else {
+      Alert.alert("Login Failed", res.data.message);
     }
   } catch (err) {
-    console.log(err);
+    console.log("FULL ERROR:", err.response?.data || err.message);
+
+    Alert.alert(
+      "Error",
+      err.response?.data?.message || err.message || "Something went wrong"
+    );
   }
 };
-
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-
-        {/* 🔥 FIXED TOP SECTION */}
+        {/* HEADER */}
         <View style={styles.topSection}>
           <Image
             source={require("../assets/DoodLogo.png")}
@@ -69,7 +80,7 @@ const handleLogin = async () => {
           <Text style={styles.tagline}>Day One to One Day</Text>
         </View>
 
-        {/* 🔥 SCROLL ONLY FORM */}
+        {/* FORM */}
         <ScrollView
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -105,7 +116,9 @@ const handleLogin = async () => {
                   secureTextEntry={!showPassword}
                   style={styles.input}
                 />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                >
                   <Feather
                     name={showPassword ? "eye" : "eye-off"}
                     size={20}
@@ -115,12 +128,9 @@ const handleLogin = async () => {
               </View>
 
               {/* LOGIN BUTTON */}
-<TouchableOpacity
-  style={styles.button}
-  onPress={() => navigation.replace("Journey")}
->
-  <Text style={styles.buttonText}>Login</Text>
-</TouchableOpacity>
+              <TouchableOpacity style={styles.button} onPress={handleLogin}>
+                <Text style={styles.buttonText}>Login</Text>
+              </TouchableOpacity>
 
               <Text style={styles.forgot}>Forgot Password?</Text>
             </View>
@@ -132,36 +142,37 @@ const handleLogin = async () => {
               <View style={styles.line} />
             </View>
 
-            {/* SOCIAL */}
-<View style={styles.socialContainer}>
-  
-  <SocialButton
-    icon="chrome"
-    text="Continue with Google"
-    onPress={() => Linking.openURL("https://accounts.google.com/signin")}
-  />
+            {/* SOCIAL LOGIN */}
+            <View style={styles.socialContainer}>
+              <SocialButton
+                icon="chrome"
+                text="Continue with Google"
+                onPress={() =>
+                  Linking.openURL("https://accounts.google.com/signin")
+                }
+              />
 
-  <SocialButton
-    icon="apple"
-    text="Continue with Apple"
-    onPress={() => Linking.openURL("https://appleid.apple.com")}
-  />
-
-</View>
+              <SocialButton
+                icon="apple"
+                text="Continue with Apple"
+                onPress={() =>
+                  Linking.openURL("https://appleid.apple.com")
+                }
+              />
+            </View>
 
             {/* SIGNUP */}
-<Text style={styles.signup}>
-  Don't have an account?{" "}
-  <Text
-    style={{ color: COLORS.primary, fontWeight: "600" }}
-    onPress={() => navigation.navigate("Signup")}
-  >
-    Create Account
-  </Text>
-</Text>
+            <Text style={styles.signup}>
+              Don't have an account?{" "}
+              <Text
+                style={{ color: COLORS.primary, fontWeight: "600" }}
+                onPress={() => navigation.navigate("Signup")}
+              >
+                Create Account
+              </Text>
+            </Text>
           </View>
         </ScrollView>
-
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -171,16 +182,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-    paddingTop:0,
   },
 
-  // 🔥 FIXED HEADER
   topSection: {
     width: "100%",
     height: 280,
     justifyContent: "center",
     alignItems: "center",
-  
   },
 
   logo: {
@@ -199,7 +207,6 @@ const styles = StyleSheet.create({
     color: "#8A7A74",
   },
 
-  // 🔥 FORM
   formContainer: {
     paddingHorizontal: 20,
   },
@@ -281,24 +288,6 @@ const styles = StyleSheet.create({
 
   socialContainer: {
     gap: 10,
-  },
-
-  socialBtn: {
-    height: 50,
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.08)",
-    borderRadius: 10,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: "#fff",
-  },
-
-  socialText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.textDark,
   },
 
   signup: {

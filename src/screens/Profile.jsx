@@ -1,4 +1,5 @@
 import React from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -10,9 +11,34 @@ import {
 } from "react-native";
 import Feather from "@react-native-vector-icons/feather";
 import FAB from "../components/FAB";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Profile({ navigation }) {
+  const [user, setUser] = useState(null);
+useEffect(() => {
+  const loadUser = async () => {
+    const data = await AsyncStorage.getItem("user");
+    console.log("USER:", data); // 👈 check
+
+    if (data) {
+      setUser(JSON.parse(data));
+    }
+  };
+
+  loadUser();
+}, []);
+
+  const handleLogout = async () => {
+  try {
+    await AsyncStorage.removeItem("token"); // 👈 token delete
+     await AsyncStorage.removeItem("user"); // 🔥 add this
+    navigation.replace("Login"); // 👈 login screen pe bhejo
+  } catch (error) {
+    console.log("Logout Error:", error);
+  }
+};
   return (
+    
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
 
@@ -23,8 +49,13 @@ export default function Profile({ navigation }) {
             style={styles.avatar}
           />
 
-          <Text style={styles.name}>Sujal Patel</Text>
-          <Text style={styles.role}>Entrepreneur • Dream Builder</Text>
+<Text style={styles.name}>
+  {user?.name || "Guest User"}
+</Text>
+
+<Text style={styles.role}>
+  {user?.email || "No Email"}
+</Text>
           <Text style={styles.quote}>
             "Building dreams one day at a time."
           </Text>
@@ -117,6 +148,23 @@ export default function Profile({ navigation }) {
       </ScrollView>
             {/* FAB */}
 <FAB onPress={() => console.log("FAB Clicked")} />
+
+  {/* LOGOUT */}
+<View style={styles.divider} />
+
+<TouchableOpacity
+  style={styles.settingRow}
+  activeOpacity={0.7}
+  onPress={handleLogout}
+>
+  <View style={styles.iconBox}>
+    <Feather name="log-out" size={16} color="#F35539" />
+  </View>
+
+  <Text style={styles.settingText}>Logout</Text>
+
+  <Feather name="chevron-right" size={18} color="#8A7F7D" />
+</TouchableOpacity>
     </SafeAreaView>
   );
 }

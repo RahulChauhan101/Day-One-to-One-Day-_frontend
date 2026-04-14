@@ -4,8 +4,11 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import OnboardingScreen1 from "../screens/OnboardingScreen1";
 import OnboardingScreen2 from "../screens/OnboardingScreen2";
 import OnboardingScreen3 from "../screens/OnboardingScreen3";
+
+
 import LoginScreen from "../screens/LoginScreen";
 import SignupScreen from "../screens/SignupScreen";
+
 import JourneyScreen from "../screens/JourneyScreen";
 import NextScreen from "../screens/NextScreen";
 import Goal_Screen from "../screens/Goal_Screen";
@@ -46,6 +49,7 @@ export default function AppNavigator() {
         contentStyle: { backgroundColor: COLORS.background },
       }}
     >
+      
       {/* ONBOARDING */}
       <Stack.Screen name="Onboarding1" component={OnboardingScreen1} />
       <Stack.Screen name="Onboarding2" component={OnboardingScreen2} />
