@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,8 @@ import {
 } from 'react-native';
 import Feather from '@react-native-vector-icons/feather';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import BottomTab from '../components/BottomTab';
 import FAB from "../components/FAB";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function HomeScreen({ navigation }) {
   const [energy, setEnergy] = useState('Very High');
@@ -20,12 +20,24 @@ export default function HomeScreen({ navigation }) {
 
   const energyLevels = ['Very High', 'Good', 'Normal', 'Low'];
   const moodLevels = ['Motivated', 'Focused', 'Neutral', 'Stressed'];
-
+  const [user, setUser] = useState(null);
   const tasks = [
     { id: 1, title: 'Build login API', tag: 'Dream - Jarvis', color: '#F35539' },
     { id: 2, title: 'Submit office report', tag: 'WORK', color: '#007AFF' },
     { id: 3, title: 'Gym workout', tag: 'PERSONAL', color: '#8A7B78' },
   ];
+
+  useEffect(() => {
+  const loadUser = async () => {
+    const data = await AsyncStorage.getItem("user");
+
+    if (data) {
+      setUser(JSON.parse(data));
+    }
+  };
+
+  loadUser();
+}, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -34,7 +46,9 @@ export default function HomeScreen({ navigation }) {
         {/* HEADER */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.title}>Good Morning, Sujal</Text>
+<Text style={styles.title}>
+  Good Morning, {user?.name || "Guest"}
+</Text>
             <Text style={styles.subtitle}>
               Small steps today create big dreams tomorrow.
             </Text>

@@ -1,16 +1,35 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   SafeAreaView,
   ScrollView,
-  TouchableOpacity,
 } from "react-native";
 import Feather from "@react-native-vector-icons/feather";
 import FAB from "../components/FAB";
+import API from "../services/api";
 
 export default function Dreams() {
+  const [dreams, setDreams] = useState([]);
+
+  // 🔥 Fetch Dreams
+  const getDreams = async () => {
+    try {
+      const res = await API.get("/dreams");
+
+      console.log("DREAMS:", res.data);
+
+      setDreams(res.data.dreams || []);
+    } catch (err) {
+      console.log(err.response?.data || err.message);
+    }
+  };
+
+  useEffect(() => {
+    getDreams();
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -48,43 +67,44 @@ export default function Dreams() {
           ))}
         </View>
 
-        {/* CARD */}
-        <DreamCard
-          title='Build company "Jarvis"'
-          desc="Create a technology company building multiple innovative apps."
-          progress={32}
-          tag="HIGH"
-          actions="5 Actions • 24 Tasks"
-          support="Supports 'Kliqit'"
-        />
-
-        <DreamCard
-          title='Build dream villa "Kailash"'
-          desc="Design and construct a modern, sustainable smart home in the mountains."
-          progress={15}
-          tag="MEDIUM"
-          actions="2 Actions • 8 Tasks"
-        />
-
-        <DreamCard
-          title="Featured in Forbes 30 Under 30"
-          desc="Achieve industry recognition for innovative contributions to technology."
-          progress={45}
-          tag="HIGH"
-          actions="8 Actions • 42 Tasks"
-        />
+        {/* 🔥 DYNAMIC DREAM LIST */}
+        {dreams.length === 0 ? (
+          <Text style={{ textAlign: "center", marginTop: 20 }}>
+            No dreams found
+          </Text>
+        ) : (
+          dreams.map((item) => (
+            <DreamCard
+              key={item._id}
+              title={item.title}
+              subTitle={item.subTitle}
+              desc={item.description}
+              progress={item.progress || 0}
+              tag={item.priority?.toUpperCase()}
+              status={item.status}
+              user={item.userId?.name}
+            />
+          ))
+        )}
 
       </ScrollView>
 
       {/* FLOAT BUTTON */}
-<FAB onPress={() => console.log("FAB Clicked")} />
-
-  
+      <FAB onPress={() => console.log("FAB Clicked")} />
     </SafeAreaView>
   );
 }
 
-const DreamCard = ({ title, desc, progress, tag, actions, support }) => {
+// 🔥 CARD COMPONENT
+const DreamCard = ({
+  title,
+  subTitle,
+  desc,
+  progress,
+  tag,
+  status,
+  user,
+}) => {
   return (
     <View style={styles.card}>
       <View style={styles.cardTop}>
@@ -103,11 +123,17 @@ const DreamCard = ({ title, desc, progress, tag, actions, support }) => {
       </View>
 
       <Text style={styles.cardTitle}>{title}</Text>
+
+      {/* Subtitle */}
+      <Text style={styles.subTitle}>{subTitle}</Text>
+
       <Text style={styles.cardDesc}>{desc}</Text>
 
-      {support && (
-        <Text style={styles.support}>{support}</Text>
-      )}
+      {/* User */}
+      <Text style={styles.meta}>By: {user}</Text>
+
+      {/* Status */}
+      <Text style={styles.status}>Status: {status}</Text>
 
       {/* Progress */}
       <View style={styles.progressRow}>
@@ -120,12 +146,11 @@ const DreamCard = ({ title, desc, progress, tag, actions, support }) => {
           style={[styles.progressFill, { width: `${progress}%` }]}
         />
       </View>
-
-      <Text style={styles.actions}>{actions}</Text>
     </View>
   );
 };
 
+// 🎨 STYLES
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -189,7 +214,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: "#fff",
     marginHorizontal: 20,
-    marginBottom: 50,
+    marginBottom: 20,
     padding: 16,
     borderRadius: 18,
   },
@@ -234,16 +259,28 @@ const styles = StyleSheet.create({
     color: "#2E2626",
   },
 
+  subTitle: {
+    fontSize: 12,
+    color: "#F35539",
+    marginTop: 2,
+  },
+
   cardDesc: {
     fontSize: 13,
     color: "#8A7F7D",
     marginTop: 6,
   },
 
-  support: {
+  meta: {
     fontSize: 12,
     color: "#6B7280",
-    marginTop: 6,
+    marginTop: 4,
+  },
+
+  status: {
+    fontSize: 12,
+    color: "#10B981",
+    marginTop: 4,
   },
 
   progressRow: {
@@ -268,25 +305,5 @@ const styles = StyleSheet.create({
     height: 6,
     backgroundColor: "#F35539",
     borderRadius: 10,
-  },
-
-  actions: {
-    fontSize: 12,
-    color: "#8A7F7D",
-    marginTop: 8,
-  },
-
-
-
-
-
-  tabItem: {
-    alignItems: "center",
-  },
-
-  tabText: {
-    fontSize: 11,
-    color: "#999",
-    marginTop: 2,
   },
 });

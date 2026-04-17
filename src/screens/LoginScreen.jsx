@@ -1,4 +1,3 @@
-//LoginScreen
 import React, { useState } from "react";
 import {
   View,
@@ -15,12 +14,11 @@ import {
   Linking,
 } from "react-native";
 
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import SocialButton from "../components/SocialButton";
 import Feather from "@react-native-vector-icons/feather";
-import API from "../services/api";
-import { setToken } from "../utils/storage";
 import { loginUser } from "../services/auth";
+import { setToken, setUser } from "../utils/storage";
+import { getToken } from "../utils/storage";
 
 const COLORS = {
   primary: "#F35539",
@@ -35,35 +33,48 @@ export default function LoginScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
 
   // ✅ LOGIN FUNCTION
-const handleLogin = async () => {
-  if (!email || !password) {
-    return Alert.alert("Error", "Please enter email and password");
-  }
-
-  try {
-    console.log("Sending:", { email, password });
-
-    const res = await loginUser({ email, password });
-
-    console.log("Response:", res.data);
-
-    if (res.data.success) {
-      await setToken(res.data.token);
-      // 🔥 USER SAVE
-await AsyncStorage.setItem("user", JSON.stringify(res.data.user));
-      navigation.replace("MainApp");
-    } else {
-      Alert.alert("Login Failed", res.data.message);
+  const handleLogin = async () => {
+    if (!email || !password) {
+      return Alert.alert("Error", "Please enter email and password");
     }
-  } catch (err) {
-    console.log("FULL ERROR:", err.response?.data || err.message);
 
-    Alert.alert(
-      "Error",
-      err.response?.data?.message || err.message || "Something went wrong"
-    );
-  }
-};
+    try {
+      console.log("Sending:", { email, password });
+
+      const res = await loginUser({ email, password });
+
+      console.log("Response:", res.data);
+
+      if (res.data.success) {
+        // ✅ SAVE TOKEN
+        await setToken(res.data.token);
+
+        // ✅ SAVE USER
+        await setUser(res.data.user);
+
+            const token = await getToken();
+    console.log("CHECK TOKEN:", token);
+
+
+        console.log("TOKEN SAVED:", res.data.token);
+
+
+
+        // ✅ NAVIGATE
+        navigation.replace("MainApp");
+      } else {
+        Alert.alert("Login Failed", res.data.message);
+      }
+    } catch (err) {
+      console.log("FULL ERROR:", err.response?.data || err.message);
+
+      Alert.alert(
+        "Error",
+        err.response?.data?.message || err.message || "Something went wrong"
+      );
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -180,10 +191,7 @@ await AsyncStorage.setItem("user", JSON.stringify(res.data.user));
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
+  container: { flex: 1, backgroundColor: COLORS.background },
 
   topSection: {
     width: "100%",
@@ -192,31 +200,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  logo: {
-    width: 130,
-    height: 130,
-  },
+  logo: { width: 130, height: 130 },
 
-  appName: {
-    fontSize: 30,
-    fontWeight: "700",
-    color: "#F2553A",
-  },
+  appName: { fontSize: 30, fontWeight: "700", color: "#F2553A" },
 
-  tagline: {
-    fontSize: 14,
-    color: "#8A7A74",
-  },
+  tagline: { fontSize: 14, color: "#8A7A74" },
 
-  formContainer: {
-    paddingHorizontal: 20,
-  },
+  formContainer: { paddingHorizontal: 20 },
 
-  title: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: COLORS.textDark,
-  },
+  title: { fontSize: 26, fontWeight: "700", color: COLORS.textDark },
 
   subtitle: {
     fontSize: 14,
@@ -243,11 +235,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 
-  input: {
-    flex: 1,
-    fontSize: 14,
-    color: COLORS.textDark,
-  },
+  input: { flex: 1, fontSize: 14, color: COLORS.textDark },
 
   button: {
     height: 50,
@@ -257,11 +245,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  buttonText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
+  buttonText: { color: "#fff", fontSize: 14, fontWeight: "600" },
 
   forgot: {
     textAlign: "center",
@@ -287,9 +271,7 @@ const styles = StyleSheet.create({
     color: COLORS.textLight,
   },
 
-  socialContainer: {
-    gap: 10,
-  },
+  socialContainer: { gap: 10 },
 
   signup: {
     textAlign: "center",

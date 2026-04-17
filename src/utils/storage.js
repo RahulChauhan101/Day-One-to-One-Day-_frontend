@@ -6,6 +6,7 @@ export const setToken = async (token) => {
 
 export const getToken = async () => {
   return await AsyncStorage.getItem("token");
+  
 };
 
 export const setUser = async (user) => {
