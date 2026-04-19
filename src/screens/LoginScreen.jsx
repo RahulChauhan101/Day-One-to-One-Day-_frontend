@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,14 +11,16 @@ import {
   Alert,
   Image,
   ScrollView,
-  Linking,
 } from "react-native";
 
 import SocialButton from "../components/SocialButton";
 import Feather from "@react-native-vector-icons/feather";
+
 import { loginUser } from "../services/auth";
-import { setToken, setUser } from "../utils/storage";
-import { getToken } from "../utils/storage";
+import API from "../services/api"; // ✅ FIXED
+import { setToken, setUser, getToken } from "../utils/storage";
+
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 
 const COLORS = {
   primary: "#F35539",
@@ -32,46 +34,98 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  // ✅ LOGIN FUNCTION
+  // ✅ GOOGLE CONFIG
+  useEffect(() => {
+    GoogleSignin.configure({
+      webClientId:
+        "607625402166-bjpp6kvidmbnvl0554r3doijv4481t4n.apps.googleusercontent.com",
+    });
+  }, []);
+
+  // ================= EMAIL LOGIN =================
   const handleLogin = async () => {
     if (!email || !password) {
       return Alert.alert("Error", "Please enter email and password");
     }
 
     try {
-      console.log("Sending:", { email, password });
-
       const res = await loginUser({ email, password });
 
-      console.log("Response:", res.data);
-
       if (res.data.success) {
-        // ✅ SAVE TOKEN
         await setToken(res.data.token);
-
-        // ✅ SAVE USER
         await setUser(res.data.user);
 
-            const token = await getToken();
-    console.log("CHECK TOKEN:", token);
+        const token = await getToken();
+        console.log("TOKEN SAVED:", token);
 
-
-        console.log("TOKEN SAVED:", res.data.token);
-
-
-
-        // ✅ NAVIGATE
-        navigation.replace("MainApp");
+        navigation.replace("Journey");
       } else {
         Alert.alert("Login Failed", res.data.message);
       }
     } catch (err) {
-      console.log("FULL ERROR:", err.response?.data || err.message);
+      console.log("LOGIN ERROR:", err);
+      Alert.alert("Error", "Invalid credentials or server error");
+    }
+  };
 
-      Alert.alert(
-        "Error",
-        err.response?.data?.message || err.message || "Something went wrong"
-      );
+  // ================= GOOGLE LOGIN =================
+  const handleGoogleLogin = async () => {
+    try {
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+
+      console.log("GOOGLE USER:", userInfo);
+
+      const email = userInfo.user.email;
+      const name = userInfo.user.name;
+
+      const fixedPassword = "google@123";
+
+      try {
+        // 👉 TRY LOGIN FIRST
+        const res = await loginUser({
+          email,
+          password: fixedPassword,
+        });
+
+        if (res.data.success) {
+          await setToken(res.data.token);
+          await setUser(res.data.user);
+
+          console.log("GOOGLE LOGIN SUCCESS");
+
+          navigation.replace("Journey");
+          return;
+        } else {
+          throw new Error("Login failed");
+        }
+      } catch (loginError) {
+        console.log("Login failed → trying signup");
+
+        // 👉 SIGNUP
+        const signupRes = await API.post("/auth/signup", {
+          name,
+          email,
+          username: name,
+          password: fixedPassword,
+          phoneNumber: "0000000000",
+          dob: "2000-01-01",
+        });
+
+        if (signupRes.data.success) {
+          await setToken(signupRes.data.token);
+          await setUser(signupRes.data.user);
+
+          console.log("GOOGLE SIGNUP SUCCESS");
+
+          navigation.replace("Journey");
+        } else {
+          Alert.alert("Signup Failed");
+        }
+      }
+    } catch (error) {
+      console.log("Google Error:", error);
+      Alert.alert("Google Login Failed");
     }
   };
 
@@ -96,7 +150,6 @@ export default function LoginScreen({ navigation }) {
         <ScrollView
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ paddingBottom: 40 }}
         >
           <View style={styles.formContainer}>
             <Text style={styles.title}>Welcome Back</Text>
@@ -110,7 +163,6 @@ export default function LoginScreen({ navigation }) {
                 <Feather name="mail" size={20} color={COLORS.textLight} />
                 <TextInput
                   placeholder="Enter your email"
-                  placeholderTextColor={COLORS.textLight}
                   value={email}
                   onChangeText={setEmail}
                   style={styles.input}
@@ -122,7 +174,6 @@ export default function LoginScreen({ navigation }) {
                 <Feather name="lock" size={20} color={COLORS.textLight} />
                 <TextInput
                   placeholder="Enter your password"
-                  placeholderTextColor={COLORS.textLight}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
@@ -154,22 +205,12 @@ export default function LoginScreen({ navigation }) {
               <View style={styles.line} />
             </View>
 
-            {/* SOCIAL LOGIN */}
+            {/* GOOGLE BUTTON */}
             <View style={styles.socialContainer}>
               <SocialButton
                 icon="chrome"
                 text="Continue with Google"
-                onPress={() =>
-                  Linking.openURL("https://accounts.google.com/signin")
-                }
-              />
-
-              <SocialButton
-                icon="apple"
-                text="Continue with Apple"
-                onPress={() =>
-                  Linking.openURL("https://appleid.apple.com")
-                }
+                onPress={handleGoogleLogin}
               />
             </View>
 

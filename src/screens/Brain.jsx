@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,16 +6,75 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
+  TextInput,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import Feather from "@react-native-vector-icons/feather";
 import FAB from "../components/FAB";
+import API from "../services/api";
 
 export default function Brain() {
+  const [idea, setIdea] = useState("");
+  const [ideas, setIdeas] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
+
+    useEffect(() => {
+    fetchIdeas();
+  }, []);
+
+
+  // ✅ GET ALL IDEAS
+  const fetchIdeas = async () => {
+    try {
+      const res = await API.get("/ideas");
+      setIdeas(res.data.ideas);
+    } catch (err) {
+      console.log("FETCH ERROR:", err?.response?.data || err.message);
+    } finally {
+      setFetching(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchIdeas();
+  }, []);
+
+  // ✅ CREATE IDEA (POSTMAN MATCH)
+  const handleAddIdea = async () => {
+    if (!idea.trim()) {
+      return Alert.alert("Error", "Enter idea first");
+    }
+
+    try {
+      setLoading(true);
+
+      await API.post("/ideas", {
+        title: idea,
+        description: idea,
+        priority: "high",
+        status: "active",
+        tags: ["mobile", "ui"],
+        category: "Product",
+      });
+
+      setIdea("");
+      fetchIdeas(); // refresh list
+
+    } catch (err) {
+      console.log("ERROR:", err?.response?.data || err.message);
+      Alert.alert("Error", "Failed to add idea");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
 
-        {/* HEADER */}
+        {/* HEADER (UNCHANGED UI) */}
         <View style={styles.header}>
           <View>
             <Text style={styles.title}>My Brain</Text>
@@ -35,16 +94,30 @@ export default function Brain() {
           </View>
         </View>
 
-        {/* INPUT CARD */}
+        {/* INPUT CARD (UI SAME, LOGIC ADDED) */}
         <View style={styles.card}>
-          <Text style={styles.placeholder}>
-            Capture an idea before it disappears...
-          </Text>
+          <TextInput
+            placeholder="Capture an idea before it disappears..."
+            placeholderTextColor="#8A7F7D"
+            value={idea}
+            onChangeText={setIdea}
+            style={{ color: "#2E2626", marginBottom: 10 }}
+          />
 
           <View style={styles.row}>
-            <TouchableOpacity style={styles.addBtn}>
-              <Feather name="plus" size={16} color="#fff" />
-              <Text style={styles.addText}>Add Idea</Text>
+            <TouchableOpacity
+              style={styles.addBtn}
+              onPress={handleAddIdea}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <Feather name="plus" size={16} color="#fff" />
+                  <Text style={styles.addText}>Add Idea</Text>
+                </>
+              )}
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.voiceBtn}>
@@ -54,7 +127,7 @@ export default function Brain() {
           </View>
         </View>
 
-        {/* FILTERS */}
+        {/* FILTERS (UNCHANGED UI) */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={styles.filters}>
             {["All", "Startup Ideas", "Product Ideas", "Strategies", "Random Thoughts", "Learning"].map((item, index) => (
@@ -81,48 +154,34 @@ export default function Brain() {
         {/* SECTION */}
         <Text style={styles.section}>Recent Inspiration</Text>
 
-        {/* CARD 1 */}
-        <View style={styles.ideaCard}>
-          <Text style={styles.ideaTitle}>
-            AI astrology feature for Nakshatra app
-          </Text>
+        {/* ✅ DYNAMIC IDEAS */}
+        {fetching ? (
+          <ActivityIndicator size="large" />
+        ) : (
+          ideas.map((item) => (
+            <View key={item._id} style={styles.ideaCard}>
+              <Text style={styles.ideaTitle}>{item.title}</Text>
 
-          <Text style={styles.ideaDesc}>
-            Use AI to generate personalized horoscope insights based on user data and historical patterns.
-          </Text>
+              <Text style={styles.ideaDesc}>
+                {item.description}
+              </Text>
 
-          <View style={styles.tagRow}>
-            <View style={styles.tag}>
-              <Text style={styles.tagText}>Startup Idea</Text>
+              <View style={styles.tagRow}>
+                <View style={styles.tag}>
+                  <Text style={styles.tagText}>{item.category}</Text>
+                </View>
+
+                <Text style={styles.link}>
+                  {new Date(item.createdAt).toLocaleDateString()}
+                </Text>
+              </View>
             </View>
-
-            <Text style={styles.link}>Linked to: Jarvis</Text>
-          </View>
-        </View>
-
-        {/* CARD 2 */}
-        <View style={styles.ideaCard}>
-          <Text style={styles.ideaTitle}>
-            Gamified daily habit tracker
-          </Text>
-
-          <Text style={styles.ideaDesc}>
-            Add an RPG element where completing habits levels up a digital avatar.
-          </Text>
-
-          <View style={styles.tagRow}>
-            <View style={styles.tag}>
-              <Text style={styles.tagText}>Product Idea</Text>
-            </View>
-
-            <Text style={styles.link}>Linked to: Kliqit</Text>
-          </View>
-        </View>
+          ))
+        )}
 
       </ScrollView>
 
-      {/* FLOAT BUTTON */}
- <FAB onPress={() => console.log("FAB Clicked")} />
+      <FAB onPress={() => console.log("FAB Clicked")} />
     </SafeAreaView>
   );
 }
