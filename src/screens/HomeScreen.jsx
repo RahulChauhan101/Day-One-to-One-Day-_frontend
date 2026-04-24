@@ -11,6 +11,7 @@ import {
 import Feather from '@react-native-vector-icons/feather';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import FAB from "../components/FAB";
+import QuickCapture from "../components/QuickCapture";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function HomeScreen({ navigation }) {
@@ -223,29 +224,21 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         {/* QUICK CAPTURE */}
-        <View style={styles.section}>
-          <Text style={styles.heading}>Quick Capture</Text>
+<View>
+  <QuickCapture
+  onPressItem={(item) => {
+    console.log(item);
 
-          <View style={styles.quickRow}>
-            {[
-              { title: 'Add Task', icon: 'check-square', type: 'feather' },
-              { title: 'Add Idea', icon: 'lightbulb-outline', type: 'material' },
-              { title: 'Voice Note', icon: 'mic', type: 'feather' },
-            ].map(item => (
-              <TouchableOpacity key={item.title} style={styles.quickItem}>
-                <View style={styles.quickBtn}>
-                  {item.type === 'material' ? (
-                    <MaterialCommunityIcons name={item.icon} size={22} color="#fff" />
-                  ) : (
-                    <Feather name={item.icon} size={22} color="#fff" />
-                  )}
-                </View>
-
-                <Text style={styles.quickText}>{item.title}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+    if (item.title === "Add Task") {
+      navigation.navigate("TaskScreen");
+    } else if (item.title === "Add Idea") {
+      navigation.navigate("IdeaScreen");
+    } else if (item.title === "Voice Note") {
+      navigation.navigate("VoiceScreen");
+    }
+  }}
+/>
+</View>
 
       </ScrollView>
 
@@ -269,6 +262,7 @@ inlineRow: {
   flexDirection: 'row',
   alignItems: 'center',
   marginTop: 20,
+  marginBottom: 10,
   marginHorizontal: 20,
 },
 
@@ -331,7 +325,11 @@ pillTextActive: {
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '90%',
     padding: 20,
+    gap: 1,
+  
   },
 
   title: {
@@ -356,7 +354,7 @@ pillTextActive: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#F35539',
+   
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -580,48 +578,6 @@ tagText: {
     marginTop: 10,
     color: '#0f0e0e',
   },
-quickRow: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginTop: -50,
-  paddingHorizontal: 10, 
-  height: 150,
-  
-  
-},
-
-quickItem: {
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: 10, 
-},
-
-quickBtn: {
-  width: 56,
-  height: 56,
-  borderRadius: 28,
-  backgroundColor: '#F35539',
-  justifyContent: 'center',
-  alignItems: 'center',
-
-  
-  shadowColor: '#F35539',
-  shadowOffset: { width: 0, height: 8 },
-  shadowOpacity: 0.25,
-  shadowRadius: 16,
-
-  elevation: 8,
-},
-
-quickText: {
-  fontSize: 13,
-  fontWeight: '600',
-  color: '#2E2626',
-},
-
-
-
 subSection: {
   marginTop: 16,
 },

@@ -17,6 +17,7 @@ import MainTabNavigator from "./MainTabNavigator";
 import { getToken } from "../utils/storage";
 
 import { COLORS } from "../theme/colors";
+import EditProfile from "../screens/EditProfile";
 
 const Stack = createNativeStackNavigator();
 
@@ -63,6 +64,8 @@ export default function AppNavigator() {
       <Stack.Screen name="Journey" component={JourneyScreen} />
       <Stack.Screen name="Next" component={NextScreen} />
       <Stack.Screen name="Goal" component={Goal_Screen} />
+
+      <Stack.Screen name="EditProfile" component={EditProfile} />
 
       {/* MAIN APP */}
       <Stack.Screen name="MainApp" component={MainTabNavigator} />

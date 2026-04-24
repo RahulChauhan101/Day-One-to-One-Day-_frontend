@@ -19,17 +19,19 @@ export default function Brain() {
   const [ideas, setIdeas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const [selectedFilter, setSelectedFilter] = useState("All");
 
-    useEffect(() => {
+  // ✅ SINGLE useEffect (IMPORTANT)
+  useEffect(() => {
     fetchIdeas();
   }, []);
 
-
-  // ✅ GET ALL IDEAS
+  // ✅ FETCH IDEAS
   const fetchIdeas = async () => {
     try {
+      setFetching(true);
       const res = await API.get("/ideas");
-      setIdeas(res.data.ideas);
+      setIdeas(res.data.ideas || []);
     } catch (err) {
       console.log("FETCH ERROR:", err?.response?.data || err.message);
     } finally {
@@ -37,11 +39,7 @@ export default function Brain() {
     }
   };
 
-  useEffect(() => {
-    fetchIdeas();
-  }, []);
-
-  // ✅ CREATE IDEA (POSTMAN MATCH)
+  // ✅ ADD IDEA
   const handleAddIdea = async () => {
     if (!idea.trim()) {
       return Alert.alert("Error", "Enter idea first");
@@ -50,7 +48,7 @@ export default function Brain() {
     try {
       setLoading(true);
 
-      await API.post("/ideas", {
+      const res = await API.post("/ideas", {
         title: idea,
         description: idea,
         priority: "high",
@@ -59,9 +57,15 @@ export default function Brain() {
         category: "Product",
       });
 
-      setIdea("");
-      fetchIdeas(); // refresh list
+      // ✅ instant UI update (no reload lag)
+      const newIdea = res.data?.idea;
+      if (newIdea) {
+        setIdeas((prev) => [newIdea, ...prev]);
+      } else {
+        fetchIdeas(); // fallback
+      }
 
+      setIdea("");
     } catch (err) {
       console.log("ERROR:", err?.response?.data || err.message);
       Alert.alert("Error", "Failed to add idea");
@@ -70,17 +74,36 @@ export default function Brain() {
     }
   };
 
+  // ✅ FILTER MAP (FIXED)
+  const filterMap = {
+    All: "All",
+    "Startup Ideas": "Startup",
+    "Product Ideas": "Product",
+    Strategies: "Strategy",
+    "Random Thoughts": "Random",
+    Learning: "Learning",
+  };
+
+  // ✅ FILTER LOGIC
+  const filteredIdeas =
+    selectedFilter === "All"
+      ? ideas
+      : ideas.filter(
+          (item) =>
+            item.category?.toLowerCase() ===
+            filterMap[selectedFilter]?.toLowerCase()
+        );
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
 
-        {/* HEADER (UNCHANGED UI) */}
+        {/* HEADER */}
         <View style={styles.header}>
           <View>
             <Text style={styles.title}>My Brain</Text>
             <Text style={styles.subtitle}>
-              A place to capture ideas, thoughts,{"\n"}
-              and inspiration.
+              Capture ideas & dreams 🚀
             </Text>
           </View>
 
@@ -94,59 +117,53 @@ export default function Brain() {
           </View>
         </View>
 
-        {/* INPUT CARD (UI SAME, LOGIC ADDED) */}
+        {/* INPUT */}
         <View style={styles.card}>
           <TextInput
-            placeholder="Capture an idea before it disappears..."
-            placeholderTextColor="#8A7F7D"
+            placeholder="Write your idea..."
+            placeholderTextColor="#999"
             value={idea}
             onChangeText={setIdea}
-            style={{ color: "#2E2626", marginBottom: 10 }}
+            style={{ color: "#000", marginBottom: 10 }}
           />
 
-          <View style={styles.row}>
-            <TouchableOpacity
-              style={styles.addBtn}
-              onPress={handleAddIdea}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <>
-                  <Feather name="plus" size={16} color="#fff" />
-                  <Text style={styles.addText}>Add Idea</Text>
-                </>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.voiceBtn}>
-              <Feather name="mic" size={16} color="#F35539" />
-              <Text style={styles.voiceText}>Voice Note</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={handleAddIdea}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Feather name="plus" size={16} color="#fff" />
+                <Text style={styles.addText}>Add Idea</Text>
+              </>
+            )}
+          </TouchableOpacity>
         </View>
 
-        {/* FILTERS (UNCHANGED UI) */}
+        {/* FILTERS */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={styles.filters}>
-            {["All", "Startup Ideas", "Product Ideas", "Strategies", "Random Thoughts", "Learning"].map((item, index) => (
-              <View
+            {Object.keys(filterMap).map((item, index) => (
+              <TouchableOpacity
                 key={index}
+                onPress={() => setSelectedFilter(item)}
                 style={[
                   styles.filter,
-                  index === 0 && styles.activeFilter,
+                  selectedFilter === item && styles.activeFilter,
                 ]}
               >
                 <Text
                   style={[
                     styles.filterText,
-                    index === 0 && styles.activeFilterText,
+                    selectedFilter === item && styles.activeFilterText,
                   ]}
                 >
                   {item}
                 </Text>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         </ScrollView>
@@ -154,13 +171,21 @@ export default function Brain() {
         {/* SECTION */}
         <Text style={styles.section}>Recent Inspiration</Text>
 
-        {/* ✅ DYNAMIC IDEAS */}
+        {/* LIST */}
         {fetching ? (
           <ActivityIndicator size="large" />
+        ) : filteredIdeas.length === 0 ? (
+          <Text style={{ textAlign: "center", marginTop: 20 }}>
+            No ideas found
+          </Text>
         ) : (
-          ideas.map((item) => (
+          filteredIdeas.map((item) => (
             <View key={item._id} style={styles.ideaCard}>
-              <Text style={styles.ideaTitle}>{item.title}</Text>
+
+              {/* ✅ TITLE FROM API */}
+              <Text style={styles.ideaTitle}>
+                {item.title}
+              </Text>
 
               <Text style={styles.ideaDesc}>
                 {item.description}
@@ -168,7 +193,9 @@ export default function Brain() {
 
               <View style={styles.tagRow}>
                 <View style={styles.tag}>
-                  <Text style={styles.tagText}>{item.category}</Text>
+                  <Text style={styles.tagText}>
+                    {item.category}
+                  </Text>
                 </View>
 
                 <Text style={styles.link}>
@@ -181,7 +208,8 @@ export default function Brain() {
 
       </ScrollView>
 
-      <FAB onPress={() => console.log("FAB Clicked")} />
+      {/* FAB */}
+      <FAB onPress={handleAddIdea} />
     </SafeAreaView>
   );
 }
@@ -231,41 +259,18 @@ const styles = StyleSheet.create({
     padding: 16,
   },
 
-  placeholder: {
-    color: "#8A7F7D",
-    marginBottom: 10,
-  },
-
-  row: {
-    flexDirection: "row",
-    gap: 10,
-  },
-
   addBtn: {
     flexDirection: "row",
     backgroundColor: "#F35539",
     padding: 10,
     borderRadius: 6,
     alignItems: "center",
+    justifyContent: "center",
     gap: 5,
   },
 
   addText: {
     color: "#fff",
-    fontWeight: "600",
-  },
-
-  voiceBtn: {
-    flexDirection: "row",
-    backgroundColor: "#FFF1EA",
-    padding: 10,
-    borderRadius: 6,
-    alignItems: "center",
-    gap: 5,
-  },
-
-  voiceText: {
-    color: "#F35539",
     fontWeight: "600",
   },
 
@@ -340,5 +345,4 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#2E2626",
   },
-
 });

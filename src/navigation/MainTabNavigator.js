@@ -18,6 +18,7 @@ export default function MainTabNavigator() {
         headerShown: false,
 
         tabBarStyle: {
+          marginBottom: 10,
           height: 70,
           paddingBottom: 10,
           paddingTop: 8,

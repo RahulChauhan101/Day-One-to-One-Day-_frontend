@@ -5,6 +5,9 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Alert,
 } from "react-native";
 import Feather from "@react-native-vector-icons/feather";
 import FAB from "../components/FAB";
@@ -12,14 +15,13 @@ import API from "../services/api";
 
 export default function Dreams() {
   const [dreams, setDreams] = useState([]);
+  const [filter, setFilter] = useState("All Dreams");
+  const [search, setSearch] = useState("");
 
-  // 🔥 Fetch Dreams
+  // ✅ FETCH DREAMS
   const getDreams = async () => {
     try {
       const res = await API.get("/dreams");
-
-      console.log("DREAMS:", res.data);
-
       setDreams(res.data.dreams || []);
     } catch (err) {
       console.log(err.response?.data || err.message);
@@ -30,125 +32,127 @@ export default function Dreams() {
     getDreams();
   }, []);
 
+  // ✅ SEARCH + FILTER ONLY (NO ADD HERE)
+  const filteredDreams = dreams.filter((item) => {
+    const matchFilter =
+      filter === "All Dreams"
+        ? true
+        : filter === "Active"
+        ? item.status === "in progress"
+        : item.progress === 100 || item.status === "boosted";
+
+    const matchSearch =
+      (item.title || "").toLowerCase().includes(search.toLowerCase()) ||
+      (item.subTitle || "").toLowerCase().includes(search.toLowerCase());
+
+    return matchFilter && matchSearch;
+  });
+
+  // ✅ FAB ADD DREAM (INDEPENDENT)
+const handleAddDream = async () => {
+  if (!search.trim()) {
+    return Alert.alert("Enter dream name first");
+  }
+
+  try {
+    const res = await API.post("/dreams", {
+      title: search,
+      subTitle: search,
+      description: search,
+      type: "work",
+      priority: "high",
+    });
+
+    const newDream = res.data?.dream;
+
+    if (newDream) {
+      setDreams((prev) => [newDream, ...prev]);
+      setSearch(""); // clear
+    }
+
+  } catch (err) {
+    Alert.alert("Error", "Failed to add dream");
+  }
+};
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView>
 
         {/* HEADER */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>My Dreams</Text>
-            <Text style={styles.subtitle}>
-              Your big goals that guide your daily actions.
-            </Text>
-          </View>
-
-          <View style={styles.searchBox}>
-            <Feather name="search" size={18} />
-          </View>
+          <Text style={styles.title}>My Dreams</Text>
+          <Text style={styles.subtitle}>Your big goals 🚀</Text>
         </View>
 
-        {/* FILTERS */}
+        {/* 🔍 SEARCH (ONLY FILTER) */}
+        <View style={styles.searchInput}>
+          <Feather name="search" size={16} />
+          <TextInput
+            placeholder="Search dreams..."
+            value={search}
+            onChangeText={setSearch}
+            style={{ flex: 1, marginLeft: 8 }}
+          />
+        </View>
+
+        {/* 🔥 FILTER */}
         <View style={styles.filterRow}>
           {["All Dreams", "Active", "Completed"].map((item, i) => (
-            <View
+            <TouchableOpacity
               key={i}
-              style={[styles.filter, i === 0 && styles.activeFilter]}
+              onPress={() => setFilter(item)}
+              style={[
+                styles.filter,
+                filter === item && styles.activeFilter,
+              ]}
             >
               <Text
                 style={[
                   styles.filterText,
-                  i === 0 && styles.activeFilterText,
+                  filter === item && styles.activeFilterText,
                 ]}
               >
                 {item}
               </Text>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
 
-        {/* 🔥 DYNAMIC DREAM LIST */}
-        {dreams.length === 0 ? (
+        {/* 📋 LIST */}
+        {filteredDreams.length === 0 ? (
           <Text style={{ textAlign: "center", marginTop: 20 }}>
             No dreams found
           </Text>
         ) : (
-          dreams.map((item) => (
-            <DreamCard
-              key={item._id}
-              title={item.title}
-              subTitle={item.subTitle}
-              desc={item.description}
-              progress={item.progress || 0}
-              tag={item.priority?.toUpperCase()}
-              status={item.status}
-              user={item.userId?.name}
-            />
+          filteredDreams.map((item) => (
+            <View key={item._id} style={styles.card}>
+              <Text style={styles.cardTitle}>{item.title}</Text>
+              <Text style={styles.subTitle}>{item.subTitle}</Text>
+              <Text style={styles.cardDesc}>{item.description}</Text>
+
+              <Text style={styles.meta}>Status: {item.status}</Text>
+              <Text style={styles.meta}>Progress: {item.progress}%</Text>
+
+              {/* Progress Bar */}
+              <View style={styles.progressBar}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    { width: `${item.progress || 0}%` },
+                  ]}
+                />
+              </View>
+            </View>
           ))
         )}
 
       </ScrollView>
 
-      {/* FLOAT BUTTON */}
-      <FAB onPress={() => console.log("FAB Clicked")} />
+      {/* ➕ FAB ADD */}
+<FAB onPress={handleAddDream} />
     </SafeAreaView>
   );
 }
-
-// 🔥 CARD COMPONENT
-const DreamCard = ({
-  title,
-  subTitle,
-  desc,
-  progress,
-  tag,
-  status,
-  user,
-}) => {
-  return (
-    <View style={styles.card}>
-      <View style={styles.cardTop}>
-        <View style={styles.iconSmall}>
-          <Feather name="briefcase" size={14} />
-        </View>
-
-        <Text
-          style={[
-            styles.tag,
-            tag === "HIGH" ? styles.high : styles.medium,
-          ]}
-        >
-          {tag}
-        </Text>
-      </View>
-
-      <Text style={styles.cardTitle}>{title}</Text>
-
-      {/* Subtitle */}
-      <Text style={styles.subTitle}>{subTitle}</Text>
-
-      <Text style={styles.cardDesc}>{desc}</Text>
-
-      {/* User */}
-      <Text style={styles.meta}>By: {user}</Text>
-
-      {/* Status */}
-      <Text style={styles.status}>Status: {status}</Text>
-
-      {/* Progress */}
-      <View style={styles.progressRow}>
-        <Text style={styles.progressLabel}>Progress</Text>
-        <Text style={styles.progressLabel}>{progress}%</Text>
-      </View>
-
-      <View style={styles.progressBar}>
-        <View
-          style={[styles.progressFill, { width: `${progress}%` }]}
-        />
-      </View>
-    </View>
-  );
-};
 
 // 🎨 STYLES
 const styles = StyleSheet.create({
@@ -158,43 +162,36 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
     padding: 20,
   },
 
   title: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#2E2626",
   },
 
   subtitle: {
     fontSize: 13,
-    color: "#8A7F7D",
-    marginTop: 4,
+    color: "#777",
   },
 
-  searchBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  searchInput: {
+    flexDirection: "row",
+    margin: 20,
     backgroundColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
+    padding: 10,
+    borderRadius: 10,
   },
 
   filterRow: {
     flexDirection: "row",
     paddingHorizontal: 20,
     gap: 10,
-    marginBottom: 10,
   },
 
   filter: {
+    padding: 8,
     backgroundColor: "#fff",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
     borderRadius: 20,
   },
 
@@ -203,8 +200,7 @@ const styles = StyleSheet.create({
   },
 
   filterText: {
-    fontSize: 12,
-    color: "#2E2626",
+    color: "#000",
   },
 
   activeFilterText: {
@@ -213,92 +209,36 @@ const styles = StyleSheet.create({
 
   card: {
     backgroundColor: "#fff",
-    marginHorizontal: 20,
-    marginBottom: 20,
+    margin: 20,
     padding: 16,
-    borderRadius: 18,
-  },
-
-  cardTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  iconSmall: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#FFF1EA",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  tag: {
-    fontSize: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    fontWeight: "600",
-  },
-
-  high: {
-    backgroundColor: "#FFE5E0",
-    color: "#F35539",
-  },
-
-  medium: {
-    backgroundColor: "#FFF3D9",
-    color: "#F59E0B",
+    borderRadius: 12,
   },
 
   cardTitle: {
     fontSize: 16,
     fontWeight: "700",
-    marginTop: 10,
-    color: "#2E2626",
   },
 
   subTitle: {
     fontSize: 12,
     color: "#F35539",
-    marginTop: 2,
   },
 
   cardDesc: {
     fontSize: 13,
-    color: "#8A7F7D",
-    marginTop: 6,
+    marginTop: 5,
   },
 
   meta: {
     fontSize: 12,
-    color: "#6B7280",
     marginTop: 4,
-  },
-
-  status: {
-    fontSize: 12,
-    color: "#10B981",
-    marginTop: 4,
-  },
-
-  progressRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 12,
-  },
-
-  progressLabel: {
-    fontSize: 12,
-    color: "#8A7F7D",
   },
 
   progressBar: {
     height: 6,
-    backgroundColor: "#E5E7EB",
+    backgroundColor: "#ddd",
     borderRadius: 10,
-    marginTop: 5,
+    marginTop: 8,
   },
 
   progressFill: {
