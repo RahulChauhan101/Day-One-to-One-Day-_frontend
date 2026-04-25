@@ -14,9 +14,11 @@ import FAB from "../components/FAB";
 import API from "../services/api";
 
 export default function Dreams() {
-  const [dreams, setDreams] = useState([]);
-  const [filter, setFilter] = useState("All Dreams");
-  const [search, setSearch] = useState("");
+const [dreams, setDreams] = useState([]);
+const [filter, setFilter] = useState("All Dreams");
+const [search, setSearch] = useState("");
+const [showInput, setShowInput] = useState(false);
+const [newDream, setNewDream] = useState("");
 
   // ✅ FETCH DREAMS
   const getDreams = async () => {
@@ -32,7 +34,7 @@ export default function Dreams() {
     getDreams();
   }, []);
 
-  // ✅ SEARCH + FILTER ONLY (NO ADD HERE)
+  // ✅ FILTER + SEARCH
   const filteredDreams = dreams.filter((item) => {
     const matchFilter =
       filter === "All Dreams"
@@ -48,32 +50,35 @@ export default function Dreams() {
     return matchFilter && matchSearch;
   });
 
-  // ✅ FAB ADD DREAM (INDEPENDENT)
-const handleAddDream = async () => {
-  if (!search.trim()) {
-    return Alert.alert("Enter dream name first");
-  }
-
-  try {
-    const res = await API.post("/dreams", {
-      title: search,
-      subTitle: search,
-      description: search,
-      type: "work",
-      priority: "high",
-    });
-
-    const newDream = res.data?.dream;
-
-    if (newDream) {
-      setDreams((prev) => [newDream, ...prev]);
-      setSearch(""); // clear
+  // ✅ ADD DREAM (FIXED)
+  const handleAddDream = async () => {
+    if (!newDream.trim()) {
+      return Alert.alert("Enter dream name");
     }
 
-  } catch (err) {
-    Alert.alert("Error", "Failed to add dream");
-  }
-};
+    try {
+      const res = await API.post("/dreams", {
+        title: newDream,
+        subTitle: newDream,
+        description: newDream,
+        type: "work",
+        priority: "high",
+      });
+
+      const added = res.data?.dream;
+
+      if (added) {
+        setDreams((prev) => [added, ...prev]);
+        setNewDream("");
+        setShowInput(false);
+        Alert.alert("Success", "Dream added 🚀");
+      }
+    } catch (err) {
+      console.log(err.response?.data || err.message);
+      Alert.alert("Error", "Failed to add dream");
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
@@ -84,7 +89,7 @@ const handleAddDream = async () => {
           <Text style={styles.subtitle}>Your big goals 🚀</Text>
         </View>
 
-        {/* 🔍 SEARCH (ONLY FILTER) */}
+        {/* 🔍 SEARCH */}
         <View style={styles.searchInput}>
           <Feather name="search" size={16} />
           <TextInput
@@ -118,6 +123,22 @@ const handleAddDream = async () => {
           ))}
         </View>
 
+        {/* ➕ ADD INPUT (NEW) */}
+        {showInput && (
+          <View style={styles.addBox}>
+            <TextInput
+              placeholder="Enter new dream..."
+              value={newDream}
+              onChangeText={setNewDream}
+              style={styles.input}
+            />
+
+            <TouchableOpacity style={styles.addBtn} onPress={handleAddDream}>
+              <Text style={styles.addBtnText}>Add Dream</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* 📋 LIST */}
         {filteredDreams.length === 0 ? (
           <Text style={{ textAlign: "center", marginTop: 20 }}>
@@ -133,7 +154,6 @@ const handleAddDream = async () => {
               <Text style={styles.meta}>Status: {item.status}</Text>
               <Text style={styles.meta}>Progress: {item.progress}%</Text>
 
-              {/* Progress Bar */}
               <View style={styles.progressBar}>
                 <View
                   style={[
@@ -145,16 +165,14 @@ const handleAddDream = async () => {
             </View>
           ))
         )}
-
       </ScrollView>
 
-      {/* ➕ FAB ADD */}
-<FAB onPress={handleAddDream} />
+      {/* ➕ FAB */}
+      <FAB onPress={() => setShowInput(true)} />
     </SafeAreaView>
   );
 }
 
-// 🎨 STYLES
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -205,6 +223,31 @@ const styles = StyleSheet.create({
 
   activeFilterText: {
     color: "#fff",
+  },
+
+  addBox: {
+    margin: 20,
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 12,
+  },
+
+  input: {
+    borderBottomWidth: 1,
+    borderColor: "#ddd",
+    padding: 8,
+  },
+
+  addBtn: {
+    marginTop: 10,
+    backgroundColor: "#F35539",
+    padding: 10,
+    borderRadius: 8,
+  },
+
+  addBtnText: {
+    color: "#fff",
+    textAlign: "center",
   },
 
   card: {

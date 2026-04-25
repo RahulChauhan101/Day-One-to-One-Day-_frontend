@@ -9,41 +9,72 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  PermissionsAndroid,
 } from "react-native";
 import Feather from "@react-native-vector-icons/feather";
-import FAB from "../components/FAB";
+import Voice from "@react-native-voice/voice";
 import API from "../services/api";
 
 export default function Brain() {
   const [idea, setIdea] = useState("");
   const [ideas, setIdeas] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(true);
-  const [selectedFilter, setSelectedFilter] = useState("All");
+  const [listening, setListening] = useState(false);
 
-  // ✅ SINGLE useEffect (IMPORTANT)
+  // ✅ REQUEST PERMISSION
+  const requestPermission = async () => {
+    try {
+      await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
+      );
+    } catch (err) {
+      console.log("Permission error:", err);
+    }
+  };
+
+  // ✅ INIT
   useEffect(() => {
+    requestPermission();
     fetchIdeas();
+
+    Voice.onSpeechStart = () => {
+      console.log("🎤 Start");
+    };
+
+    Voice.onSpeechEnd = () => {
+      console.log("🎤 End");
+      setListening(false);
+    };
+
+    Voice.onSpeechError = (e) => {
+      console.log("Voice error:", e);
+      setListening(false);
+    };
+
+    Voice.onSpeechResults = (e) => {
+      if (e.value?.length > 0) {
+        setIdea(e.value[0]);
+      }
+    };
+
+    return () => {
+      Voice.destroy().then(Voice.removeAllListeners);
+    };
   }, []);
 
   // ✅ FETCH IDEAS
   const fetchIdeas = async () => {
     try {
-      setFetching(true);
       const res = await API.get("/ideas");
-      setIdeas(res.data.ideas || []);
+      setIdeas(res.data?.ideas || res.data?.data || []);
     } catch (err) {
-      console.log("FETCH ERROR:", err?.response?.data || err.message);
-    } finally {
-      setFetching(false);
+      console.log("API error:", err.message);
     }
   };
 
   // ✅ ADD IDEA
   const handleAddIdea = async () => {
-    if (!idea.trim()) {
-      return Alert.alert("Error", "Enter idea first");
-    }
+    if (!idea.trim()) return Alert.alert("Enter idea first");
 
     try {
       setLoading(true);
@@ -51,48 +82,47 @@ export default function Brain() {
       const res = await API.post("/ideas", {
         title: idea,
         description: idea,
-        priority: "high",
-        status: "active",
-        tags: ["mobile", "ui"],
         category: "Product",
       });
 
-      // ✅ instant UI update (no reload lag)
       const newIdea = res.data?.idea;
+
       if (newIdea) {
         setIdeas((prev) => [newIdea, ...prev]);
-      } else {
-        fetchIdeas(); // fallback
       }
 
       setIdea("");
     } catch (err) {
-      console.log("ERROR:", err?.response?.data || err.message);
-      Alert.alert("Error", "Failed to add idea");
+      Alert.alert("Error adding idea");
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ FILTER MAP (FIXED)
-  const filterMap = {
-    All: "All",
-    "Startup Ideas": "Startup",
-    "Product Ideas": "Product",
-    Strategies: "Strategy",
-    "Random Thoughts": "Random",
-    Learning: "Learning",
-  };
+  // 🎤 START VOICE
+const startListening = async () => {
+  try {
+    if (listening) return;
 
-  // ✅ FILTER LOGIC
-  const filteredIdeas =
-    selectedFilter === "All"
-      ? ideas
-      : ideas.filter(
-          (item) =>
-            item.category?.toLowerCase() ===
-            filterMap[selectedFilter]?.toLowerCase()
-        );
+    await Voice.start("en-US"); // ❌ no destroy
+
+    setListening(true);
+  } catch (e) {
+    console.log("Start error:", e);
+  }
+};
+
+  // 🛑 STOP VOICE (CRASH FIXED)
+const stopListening = async () => {
+  try {
+    if (!listening) return;
+
+    await Voice.stop();
+    setListening(false);
+  } catch (e) {
+    console.log("Stop error:", e);
+  }
+};
 
   return (
     <SafeAreaView style={styles.container}>
@@ -117,91 +147,64 @@ export default function Brain() {
           </View>
         </View>
 
-        {/* INPUT */}
+        {/* INPUT CARD */}
         <View style={styles.card}>
           <TextInput
             placeholder="Write your idea..."
-            placeholderTextColor="#999"
             value={idea}
             onChangeText={setIdea}
-            style={{ color: "#000", marginBottom: 10 }}
+            style={styles.input}
           />
 
-          <TouchableOpacity
-            style={styles.addBtn}
-            onPress={handleAddIdea}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <>
-                <Feather name="plus" size={16} color="#fff" />
-                <Text style={styles.addText}>Add Idea</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
+          <View style={styles.row}>
+            {/* ADD */}
+            <TouchableOpacity style={styles.addBtn} onPress={handleAddIdea}>
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <Feather name="plus" size={16} color="#fff" />
+                  <Text style={styles.addText}>Add Idea</Text>
+                </>
+              )}
+            </TouchableOpacity>
 
-        {/* FILTERS */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={styles.filters}>
-            {Object.keys(filterMap).map((item, index) => (
-              <TouchableOpacity
-                key={index}
-                onPress={() => setSelectedFilter(item)}
+            {/* VOICE */}
+            <TouchableOpacity
+              style={[
+                styles.voiceBtn,
+                listening && { backgroundColor: "#F35539" },
+              ]}
+onPress={() => {
+  console.log("VOICE CLICKED"); // 👈 check
+  listening ? stopListening() : startListening();
+}}
+            >
+              <Feather
+                name="mic"
+                size={16}
+                color={listening ? "#fff" : "#F35539"}
+              />
+              <Text
                 style={[
-                  styles.filter,
-                  selectedFilter === item && styles.activeFilter,
+                  styles.voiceText,
+                  listening && { color: "#fff" },
                 ]}
               >
-                <Text
-                  style={[
-                    styles.filterText,
-                    selectedFilter === item && styles.activeFilterText,
-                  ]}
-                >
-                  {item}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                {listening ? "Listening..." : "Voice"}
+              </Text>
+            </TouchableOpacity>
           </View>
-        </ScrollView>
-
-        {/* SECTION */}
-        <Text style={styles.section}>Recent Inspiration</Text>
+        </View>
 
         {/* LIST */}
-        {fetching ? (
-          <ActivityIndicator size="large" />
-        ) : filteredIdeas.length === 0 ? (
-          <Text style={{ textAlign: "center", marginTop: 20 }}>
-            No ideas found
-          </Text>
+        {ideas.length === 0 ? (
+          <Text style={styles.empty}>No ideas found</Text>
         ) : (
-          filteredIdeas.map((item) => (
+          ideas.map((item) => (
             <View key={item._id} style={styles.ideaCard}>
-
-              {/* ✅ TITLE FROM API */}
-              <Text style={styles.ideaTitle}>
-                {item.title}
-              </Text>
-
-              <Text style={styles.ideaDesc}>
-                {item.description}
-              </Text>
-
-              <View style={styles.tagRow}>
-                <View style={styles.tag}>
-                  <Text style={styles.tagText}>
-                    {item.category}
-                  </Text>
-                </View>
-
-                <Text style={styles.link}>
-                  {new Date(item.createdAt).toLocaleDateString()}
-                </Text>
-              </View>
+              <Text style={styles.ideaTitle}>{item.title}</Text>
+              <Text style={styles.ideaDesc}>{item.description}</Text>
             </View>
           ))
         )}
@@ -209,16 +212,15 @@ export default function Brain() {
       </ScrollView>
 
       {/* FAB */}
-      <FAB onPress={handleAddIdea} />
+      <TouchableOpacity style={styles.fab}>
+        <Feather name="plus" size={22} color="#fff" />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFF5EC",
-  },
+  container: { flex: 1, backgroundColor: "#FFF5EC" },
 
   header: {
     flexDirection: "row",
@@ -227,7 +229,7 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: "700",
     color: "#2E2626",
   },
@@ -235,13 +237,9 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: "#8A7F7D",
-    marginTop: 4,
   },
 
-  iconRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
+  iconRow: { flexDirection: "row", gap: 10 },
 
   iconBox: {
     width: 40,
@@ -254,95 +252,72 @@ const styles = StyleSheet.create({
 
   card: {
     margin: 20,
+    padding: 16,
     backgroundColor: "#fff",
     borderRadius: 16,
-    padding: 16,
+    elevation: 3,
   },
 
+  input: {
+    borderBottomWidth: 1,
+    borderColor: "#ddd",
+    marginBottom: 12,
+  },
+
+  row: { flexDirection: "row", alignItems: "center" },
+
   addBtn: {
+    flex: 1,
     flexDirection: "row",
+    justifyContent: "center",
     backgroundColor: "#F35539",
     padding: 10,
     borderRadius: 6,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 5,
   },
 
-  addText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
+  addText: { color: "#fff", marginLeft: 5 },
 
-  filters: {
+  voiceBtn: {
+    marginLeft: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#F35539",
+    borderRadius: 6,
+    width: 110,
     flexDirection: "row",
-    paddingHorizontal: 20,
-    gap: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
 
-  filter: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    backgroundColor: "#fff",
-    borderRadius: 20,
-  },
-
-  activeFilter: {
-    backgroundColor: "#F35539",
-  },
-
-  filterText: {
-    color: "#2E2626",
-  },
-
-  activeFilterText: {
-    color: "#fff",
-  },
-
-  section: {
-    margin: 20,
-    fontWeight: "600",
-    color: "#8A7F7D",
-  },
+  voiceText: { color: "#F35539", marginLeft: 5 },
 
   ideaCard: {
-    backgroundColor: "#fff",
     marginHorizontal: 20,
-    marginBottom: 16,
+    marginBottom: 15,
     padding: 16,
+    backgroundColor: "#fff",
     borderRadius: 16,
   },
 
-  ideaTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#2E2626",
+  ideaTitle: { fontWeight: "700" },
+
+  ideaDesc: { marginTop: 5, color: "#777" },
+
+  empty: {
+    textAlign: "center",
+    marginTop: 20,
+    color: "#777",
   },
 
-  ideaDesc: {
-    marginTop: 8,
-    color: "#8A7F7D",
-  },
-
-  tagRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 10,
-  },
-
-  tag: {
-    backgroundColor: "#FFF1EA",
-    padding: 6,
-    borderRadius: 4,
-  },
-
-  tagText: {
-    color: "#F35539",
-    fontSize: 12,
-  },
-
-  link: {
-    fontSize: 12,
-    color: "#2E2626",
+  fab: {
+    position: "absolute",
+    bottom: 30,
+    right: 20,
+    backgroundColor: "#F35539",
+    width: 55,
+    height: 55,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
