@@ -69,6 +69,20 @@ export default function LoginScreen({ navigation }) {
     }
   };
 
+  const handleForgot = async () => {
+  try {
+    const res = await API.post("/auth/forgot-password", { email });
+
+    if (res.data.success) {
+      Alert.alert("Success", res.data.message);
+      navigation.navigate("VerifyOtp", { email });
+    }
+  } catch (err) {
+    console.log(err);
+    Alert.alert("Error", "Something went wrong");
+  }
+};
+
   // ================= GOOGLE LOGIN =================
   const handleGoogleLogin = async () => {
     try {
@@ -196,7 +210,9 @@ export default function LoginScreen({ navigation }) {
                 <Text style={styles.buttonText}>Login</Text>
               </TouchableOpacity>
 
-              <Text style={styles.forgot}>Forgot Password?</Text>
+      <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword")}>
+  <Text style={styles.forgot}>Forgot Password?</Text>
+</TouchableOpacity>
             </View>
 
             {/* DIVIDER */}

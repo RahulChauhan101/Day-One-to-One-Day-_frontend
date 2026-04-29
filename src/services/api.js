@@ -2,7 +2,8 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const API = axios.create({
-baseURL: "http://10.35.58.218:4000/api",
+baseURL: "http://10.34.67.218:4000/api/",
+// baseURL: "http://192.168.137.1:4000/api",
 
   timeout: 10000,
   headers: {
@@ -32,6 +33,18 @@ API.interceptors.request.use(
     return config;
   },
   (error) => Promise.reject(error)
+);
+
+// ✅ RESPONSE INTERCEPTOR (👉 YAHAN ADD KARNA HAI)
+API.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    console.log("FULL ERROR:", err);
+    console.log("ERROR DATA:", err.response?.data);
+    console.log("ERROR MESSAGE:", err.message);
+    console.log("BASE URL:", API.defaults.baseURL);
+    return Promise.reject(err);
+  }
 );
 
 export default API;

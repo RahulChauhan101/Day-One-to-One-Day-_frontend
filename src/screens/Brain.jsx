@@ -8,103 +8,58 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  Animated ,
+  Animated,
   ActivityIndicator,
-  PermissionsAndroid,
 } from "react-native";
 import Feather from "@react-native-vector-icons/feather";
-import Voice from "@react-native-voice/voice";
 import API from "../services/api";
 
 export default function Brain() {
   const [idea, setIdea] = useState("");
   const [ideas, setIdeas] = useState([]);
-  const [search, setSearch] = useState(""); 
+  const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const animatedWidth = useState(new Animated.Value(40))[0];
   const [loading, setLoading] = useState(false);
-  const [listening, setListening] = useState(false);
   const [selected, setSelected] = useState("All");
 
-  // ✅ REQUEST PERMISSION
-  const requestPermission = async () => {
-    try {
-      await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
-      );
-    } catch (err) {
-      console.log("Permission error:", err);
-    }
+  useEffect(() => {
+    fetchIdeas();
+  }, []);
+
+  const openSearch = () => {
+    setSearchOpen(true);
+    Animated.timing(animatedWidth, {
+      toValue: 220,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
   };
 
-  // ✅ INIT
-useEffect(() => {
-  requestPermission();
-  fetchIdeas();
-
-  if (!Voice) return;
-
-  Voice.onSpeechStart = () => console.log("🎤 Start");
-
-  Voice.onSpeechEnd = () => {
-    console.log("🎤 End");
-    setListening(false);
+  const closeSearch = () => {
+    Animated.timing(animatedWidth, {
+      toValue: 40,
+      duration: 300,
+      useNativeDriver: false,
+    }).start(() => {
+      setSearchOpen(false);
+      setSearch("");
+    });
   };
-
-  Voice.onSpeechError = (e) => {
-    console.log("Voice error:", e);
-    setListening(false);
-  };
-
-  Voice.onSpeechResults = (e) => {
-    if (e.value?.length > 0) {
-      setIdea(e.value[0]);
-    }
-  };
-
-  return () => {
-    if (Voice) {
-      Voice.destroy().then(() => {
-        Voice.removeAllListeners();
-      });
-    }
-  };
-}, []);
-
-const openSearch = () => {
-  setSearchOpen(true);
-
-  Animated.timing(animatedWidth, {
-    toValue: 220,
-    duration: 300,
-    useNativeDriver: false,
-  }).start();
-};
-
-const closeSearch = () => {
-  Animated.timing(animatedWidth, {
-    toValue: 40,
-    duration: 300,
-    useNativeDriver: false,
-  }).start(() => {
-    setSearchOpen(false);
-    setSearch("");
-  });
-};
 
   // ✅ FETCH IDEAS
   const fetchIdeas = async () => {
     try {
       const res = await API.get("/ideas");
-const data = res.data?.ideas || res.data?.data;
+      const data = res.data?.ideas || res.data?.data;
 
-if (Array.isArray(data)) {
-  setIdeas(data);
-} else {
-  setIdeas([]);
-}
+      if (Array.isArray(data)) {
+        setIdeas(data);
+      } else {
+        setIdeas([]);
+      }
     } catch (err) {
-      console.log("API error:", err.message);
+      console.log("API error:", err.response?.data || err.message);
     }
   };
 
@@ -135,98 +90,64 @@ if (Array.isArray(data)) {
     }
   };
 
-  // 🎤 START VOICE
-  const startListening = async () => {
-    try {
-      if (listening) return;
-      await Voice.start("en-US");
-      setListening(true);
-    } catch (e) {
-      console.log("Start error:", e);
-    }
-  };
+  const categories = ["All", "Product", "Business", "Startup", "Design", "Tech"];
 
-  // 🛑 STOP VOICE
-  const stopListening = async () => {
-    try {
-      if (!listening) return;
-      await Voice.stop();
-      setListening(false);
-    } catch (e) {
-      console.log("Stop error:", e);
-    }
-  };
-  const categories = [
-  "All",
-  "Product",
-  "Business",
-  "Startup",
-  "Design",
-  "Tech",
-];
+  const filteredIdeas = (ideas || []).filter((item) => {
+    const matchSearch = item.title
+      ?.toLowerCase()
+      .includes(search.toLowerCase());
 
-  // 🔍 FILTER LOGIC
-const filteredIdeas = (ideas || []).filter((item) => {
-  const matchSearch = item.title
-    ?.toLowerCase()
-    .includes(search.toLowerCase());
+    const matchCategory =
+      selected === "All" || item.category === selected;
 
-  const matchCategory =
-    selected === "All" || item.category === selected;
-
-  return matchSearch && matchCategory;
-});
+    return matchSearch && matchCategory;
+  });
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-
+        
         {/* HEADER */}
- <View style={styles.header}>
-  
-  {/* LEFT SIDE */}
-  <View style={styles.leftSection}>
-    <Text style={styles.title}>My Brain</Text>
-    <Text style={styles.subtitle}>A place to capture ideas, thoughts, and inspiration.</Text>
-  </View>
+        <View style={styles.header}>
+          <View style={styles.leftSection}>
+            <Text style={styles.title}>My Brain</Text>
+            <Text style={styles.subtitle}>
+              A place to capture ideas, thoughts, and inspiration.
+            </Text>
+          </View>
 
-  {/* RIGHT SIDE */}
-  <View style={styles.rightSection}>
-    
-    {/* 🔍 SEARCH (ANIMATED) */}
-    <Animated.View style={[styles.searchAnimated, { width: animatedWidth }]}>
-      {searchOpen ? (
-        <>
-          <Feather name="search" size={16} color="#777" />
+          <View style={styles.rightSection}>
+            <Animated.View
+              style={[styles.searchAnimated, { width: animatedWidth }]}
+            >
+              {searchOpen ? (
+                <>
+                  <Feather name="search" size={16} color="#777" />
+                  <TextInput
+                    placeholder="Search..."
+                    value={search}
+                    onChangeText={setSearch}
+                    style={styles.searchInput}
+                    autoFocus
+                  />
+                  <TouchableOpacity onPress={closeSearch}>
+                    <Feather name="x" size={18} color="#777" />
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <TouchableOpacity onPress={openSearch}>
+                  <Feather name="search" size={18} color="#2E2626" />
+                </TouchableOpacity>
+              )}
+            </Animated.View>
 
-          <TextInput
-            placeholder="Search..."
-            value={search}
-            onChangeText={setSearch}
-            style={styles.searchInput}
-            autoFocus
-          />
+            <TouchableOpacity style={styles.iconBox}>
+              <Feather name="sliders" size={18} color="#2E2626" />
+            </TouchableOpacity>
+          </View>
+        </View>
 
-          <TouchableOpacity onPress={closeSearch}>
-            <Feather name="x" size={18} color="#777" />
-          </TouchableOpacity>
-        </>
-      ) : (
-        <TouchableOpacity onPress={openSearch}>
-          <Feather name="search" size={18} color="#2E2626" />
-        </TouchableOpacity>
-      )}
-    </Animated.View>
-
-    {/* ⋮ MORE ICON */}
-    <TouchableOpacity style={styles.iconBox}>
-      <Feather name="sliders" size={18} color="#2E2626" />
-    </TouchableOpacity>
-
-  </View>
-</View>
-
-        {/* INPUT CARD */}
+        {/* INPUT */}
         <View style={styles.card}>
           <TextInput
             placeholder="Capture an idea before it disappears..."
@@ -236,7 +157,6 @@ const filteredIdeas = (ideas || []).filter((item) => {
           />
 
           <View style={styles.row}>
-            {/* ADD */}
             <TouchableOpacity style={styles.addBtn} onPress={handleAddIdea}>
               {loading ? (
                 <ActivityIndicator color="#fff" />
@@ -248,95 +168,68 @@ const filteredIdeas = (ideas || []).filter((item) => {
               )}
             </TouchableOpacity>
 
-            {/* VOICE */}
+            {/* Voice removed */}
             <TouchableOpacity
-              style={[
-                styles.voiceBtn,
-                listening && { backgroundColor: "#F35539" },
-              ]}
-              onPress={() =>
-                listening ? stopListening() : startListening()
-              }
+              style={styles.voiceBtn}
+              onPress={() => Alert.alert("Voice coming soon")}
             >
-              <Feather
-                name="mic"
-                size={16}
-                color={listening ? "#fff" : "#F35539"}
-              />
-              <Text
-                style={[
-                  styles.voiceText,
-                  listening && { color: "#fff" },
-                ]}
-              >
-                {listening ? "Listening..." : "Voice"}
-              </Text>
+              <Feather name="mic" size={16} color="#F35539" />
+              <Text style={styles.voiceText}>Voice</Text>
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* CATEGORY */}
         <ScrollView
-  horizontal
-  showsHorizontalScrollIndicator={false}
-  style={styles.chipWrapper}
->
-  {categories.map((item, index) => (
-    <TouchableOpacity
-      key={index}
-      style={[
-        styles.chip,
-        selected === item && styles.activeChip
-      ]}
-      onPress={() => setSelected(item)}
-    >
-      <Text
-        style={[
-          styles.chipText,
-          selected === item && styles.activeChipText
-        ]}
-      >
-        {item}
-      </Text>
-    </TouchableOpacity>
-  ))}
-</ScrollView>
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.chipWrapper}
+        >
+          {categories.map((item, index) => (
+            <TouchableOpacity
+              key={index}
+              style={[
+                styles.chip,
+                selected === item && styles.activeChip,
+              ]}
+              onPress={() => setSelected(item)}
+            >
+              <Text
+                style={[
+                  styles.chipText,
+                  selected === item && styles.activeChipText,
+                ]}
+              >
+                {item}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
         {/* LIST */}
- {filteredIdeas.length === 0 ? (
-  <Text style={styles.empty}>No results found</Text>
-) : (
-  filteredIdeas.map((item) => (
-    <View key={item._id} style={styles.ideaCard}>
+        {filteredIdeas.length === 0 ? (
+          <Text style={styles.empty}>No results found</Text>
+        ) : (
+          filteredIdeas.map((item) => (
+            <View key={item._id} style={styles.ideaCard}>
+              <Text style={styles.ideaTitle}>{item.title}</Text>
+              <Text style={styles.ideaDesc}>{item.description}</Text>
 
-      {/* TITLE */}
-      <Text style={styles.ideaTitle}>
-        {item.title}
-      </Text>
+              <View style={styles.tagRow}>
+                <View style={styles.categoryTag}>
+                  <Text style={styles.categoryText}>
+                    {item.category || "Product"}
+                  </Text>
+                </View>
 
-      {/* DESCRIPTION */}
-      <Text style={styles.ideaDesc}>
-        {item.description}
-      </Text>
-
-      {/* TAG ROW */}
-      <View style={styles.tagRow}>
-        <View style={styles.categoryTag}>
-          <Text style={styles.categoryText}>
-            {item.category || "Product"}
-          </Text>
-        </View>
-
-        <View style={styles.secondaryTag}>
-          <Feather name="clock" size={12} color="#2E2626" />
-          <Text style={styles.secondaryText}>
-            Just now
-          </Text>
-        </View>
-      </View>
-
-    </View>
-  ))
-)}
-
+                <View style={styles.secondaryTag}>
+                  <Feather name="clock" size={12} color="#2E2626" />
+                  <Text style={styles.secondaryText}>Just now</Text>
+                </View>
+              </View>
+            </View>
+          ))
+        )}
       </ScrollView>
 
       {/* FAB */}
@@ -346,7 +239,6 @@ const filteredIdeas = (ideas || []).filter((item) => {
     </SafeAreaView>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
