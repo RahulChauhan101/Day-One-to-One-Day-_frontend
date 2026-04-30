@@ -7,6 +7,9 @@ import OnboardingScreen3 from '../screens/OnboardingScreen3';
 
 import ForgotPassword from '../components/ForgotPassword';
 import VerifyOtpAndReset from '../components/VerifyOtpAndReset';
+import JourneyScreen from '../screens/JourneyScreen';
+import  Next from '../screens/NextScreen';
+import Goal from '../screens/Goal_Screen';
 
 import SplashScreen from '../screens/SplashScreen';
 
@@ -38,6 +41,9 @@ export default function AppNavigator() {
       <Stack.Screen name="Signup" component={SignupScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
       <Stack.Screen name="VerifyOtpAndReset" component={VerifyOtpAndReset} />
+      <Stack.Screen name="Journey" component={JourneyScreen} />
+      <Stack.Screen name="Next" component={Next} />
+      <Stack.Screen name="Goal" component={Goal} />
 
       {/* MAIN */}
       <Stack.Screen name="MainApp" component={MainTabNavigator} />

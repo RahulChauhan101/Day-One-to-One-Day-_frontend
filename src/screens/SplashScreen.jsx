@@ -10,7 +10,6 @@ export default function SplashScreen({ navigation }) {
   useEffect(() => {
     let mounted = true;
 
-    // 🔄 fake progress animation
     let interval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
@@ -19,7 +18,7 @@ export default function SplashScreen({ navigation }) {
         }
         return prev + 5;
       });
-    }, 100); // speed control
+    }, 100);
 
     const init = async () => {
       const token = await getToken();
@@ -28,7 +27,6 @@ export default function SplashScreen({ navigation }) {
         if (!mounted) return;
 
         await RNBootSplash.hide({ fade: true });
-
         navigation.replace(token ? "MainApp" : "Onboarding1");
       }, 3000);
     };
@@ -43,20 +41,22 @@ export default function SplashScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Center Content */}
       <View style={styles.center}>
         <Text style={styles.title}>DO-OD</Text>
         <Text style={styles.tagline}>Day One to One Day</Text>
 
-        {/* 🔥 Progress UI */}
         <View style={styles.progressBox}>
           <View style={[styles.progressFill, { width: `${progress}%` }]} />
         </View>
+
         <Text style={styles.percent}>{progress}%</Text>
       </View>
 
+      {/* Bottom */}
       <View style={styles.bottom}>
-        <Text>Powered By</Text>
-        <Text style={{ fontWeight: "700" }}>JARVIS</Text>
+        <Text style={styles.powered}>Powered By</Text>
+        <Text style={styles.jarvis}>JARVIS</Text>
       </View>
     </SafeAreaView>
   );
@@ -65,7 +65,7 @@ export default function SplashScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#d47420",
+    backgroundColor: "#FFF5EC",
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: 40,
@@ -77,38 +77,54 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
+  // 🔥 DO-OD (Figma exact)
   title: {
     fontSize: 32,
     fontWeight: "700",
-    color: "#fff",
+    color: "#F2553A",
   },
 
+  // 🔥 tagline
   tagline: {
     fontSize: 16,
-    color: "#f5f5f5",
-    marginBottom: 20,
+    color: "#8A7A74",
+    marginTop: 5,
+    marginBottom: 25,
   },
 
+  // 🔥 Progress bar (light white)
   progressBox: {
     width: 200,
     height: 6,
-    backgroundColor: "#ffffff30",
+    backgroundColor: "#ffffff",
     borderRadius: 10,
     overflow: "hidden",
   },
 
   progressFill: {
     height: "100%",
-    backgroundColor: "#fff",
+    backgroundColor: "#F2553A",
   },
 
   percent: {
     marginTop: 10,
-    color: "#fff",
+    color: "#8A7A74",
     fontWeight: "600",
   },
 
+  // 🔥 Bottom text
   bottom: {
     alignItems: "center",
+  },
+
+  powered: {
+    fontSize: 16,
+    color: "#000",
+  },
+
+  jarvis: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#000",
   },
 });
