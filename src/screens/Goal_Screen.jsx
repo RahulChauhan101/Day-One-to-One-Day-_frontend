@@ -15,47 +15,73 @@ import Feather from "@react-native-vector-icons/feather";
 import API from "../services/api";
 
 export default function Goal_Screen({ navigation }) {
-  // ✅ ALL HOOKS AT TOP (NO CONDITION)
   const [goal, setGoal] = useState("");
   const [priority, setPriority] = useState("High");
   const [showDropdown, setShowDropdown] = useState(false);
   const [timeline, setTimeline] = useState("1 - 3 Years");
   const [loading, setLoading] = useState(false);
 
-  // ✅ stable function (optional but safe)
+  // ✅ Timeline → Date convert
   const getTargetDate = useCallback(() => {
-    if (timeline === "1 - 3 Years") return "2027-01-01";
-    if (timeline === "3 - 5 Years") return "2029-01-01";
-    return "2032-01-01";
+    const now = new Date();
+
+    if (timeline === "1 - 3 Years") {
+      now.setFullYear(now.getFullYear() + 2);
+    } else if (timeline === "3 - 5 Years") {
+      now.setFullYear(now.getFullYear() + 4);
+    } else {
+      now.setFullYear(now.getFullYear() + 7);
+    }
+
+    return now;
   }, [timeline]);
 
-  // ✅ API CALL
- const handleCreateDream = async () => {
-  try {
-    const res = await API.post("/dreams", {
-      title: goal,
-      subTitle: "My Goal",
-      description: goal,
-      image: "https://example.com/image.jpg",
-      priority: priority.toLowerCase(),
-      type: "work", // ✅ change
-      status: "in progress",
-      targetDate: new Date(getTargetDate()).toISOString(), // ✅ FIX
-      progress: 0,
-    });
+  // ✅ CREATE DREAM API
+  const handleCreateDream = async () => {
+    if (!goal.trim()) {
+      Alert.alert("Error", "Please enter your goal");
+      return;
+    }
 
-    console.log("SUCCESS:", res.data);
+    try {
+      setLoading(true);
 
-    navigation.replace("MainApp");
+      const targetDate = getTargetDate();
 
-  } catch (err) {
-    console.log("FULL ERROR:", err?.response?.data); // 👈 IMPORTANT
-  }
-};
+      const res = await API.post("/dreams", {
+        title: goal,
+        subTitle: "My Goal",
+        description: goal,
+        image: "https://example.com/image.jpg",
+
+        priority: priority.toLowerCase(), // ✅ backend match
+
+        type: "work",
+
+        status: "in progress",
+
+        timeline: targetDate,       // ✅ Date
+        targetDate: targetDate,     // ✅ Date
+
+        progress: 0,
+      });
+
+      console.log("SUCCESS:", res.data);
+
+      navigation.replace("MainApp");
+
+    } catch (err) {
+      console.log("ERROR:", err?.response?.data);
+      Alert.alert("Error", "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
+        
         {/* HEADER */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
@@ -178,9 +204,12 @@ export default function Goal_Screen({ navigation }) {
       {/* FOOTER */}
       <View style={styles.footer}>
         <TouchableOpacity
-          style={styles.button}
+          style={[
+            styles.button,
+            (!goal || loading) && { opacity: 0.6 },
+          ]}
           onPress={handleCreateDream}
-          disabled={loading}
+          disabled={!goal || loading}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />

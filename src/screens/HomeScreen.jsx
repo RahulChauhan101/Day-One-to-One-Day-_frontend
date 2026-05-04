@@ -9,36 +9,91 @@ import {
   ScrollView,
 } from 'react-native';
 import Feather from '@react-native-vector-icons/feather';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import API from "../services/api";
 import FAB from "../components/FAB";
 import QuickCapture from "../components/QuickCapture";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function HomeScreen({ navigation }) {
+
+  // ✅ HOOKS
   const [energy, setEnergy] = useState('Very High');
-  const [mood, setMood] = useState('Motivated',);
+  const [mood, setMood] = useState('Motivated');
   const [showMood, setShowMood] = useState(false);
+
+  const [user, setUser] = useState(null);
+  const [tasks, setTasks] = useState([]);
 
   const energyLevels = ['Very High', 'Good', 'Normal', 'Low'];
   const moodLevels = ['Motivated', 'Focused', 'Neutral', 'Stressed'];
-  const [user, setUser] = useState(null);
-  const tasks = [
-    { id: 1, title: 'Build login API', tag: 'Dream - Jarvis', color: '#F35539' },
-    { id: 2, title: 'Submit office report', tag: 'WORK', color: '#007AFF' },
-    { id: 3, title: 'Gym workout', tag: 'PERSONAL', color: '#8A7B78' },
-  ];
 
+  // ✅ USER LOAD
   useEffect(() => {
-  const loadUser = async () => {
-    const data = await AsyncStorage.getItem("user");
+    const loadUser = async () => {
+      const data = await AsyncStorage.getItem("user");
+      if (data) setUser(JSON.parse(data));
+    };
+    loadUser();
+  }, []);
 
-    if (data) {
-      setUser(JSON.parse(data));
+  // ✅ FETCH TASKS
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const fetchTasks = async () => {
+    try {
+      const res = await API.get("/tasks");
+      setTasks(res.data.tasks || []);
+    } catch (err) {
+      console.log("TASK ERROR:", err?.response?.data);
     }
   };
 
-  loadUser();
-}, []);
+  // ✅ TOGGLE TASK
+  const toggleTask = async (taskId, currentStatus) => {
+    try {
+      // UI update
+      setTasks(prev =>
+        prev.map(t =>
+          t._id === taskId ? { ...t, isCompleted: !currentStatus } : t
+        )
+      );
+
+      // API call
+      await API.patch(`/tasks/${taskId}`, {
+        isCompleted: !currentStatus,
+      });
+
+    } catch (err) {
+      console.log("TOGGLE ERROR:", err?.response?.data);
+    }
+  };
+const createTask = async () => {
+  try {
+    const payload = {
+      title: title, // dynamic input use करो
+      description: description,
+      priority: "medium",
+      dueDate: new Date().toISOString(),
+      dreamId: dreamId, // 🔥 MAIN FIX
+    };
+
+    const res = await API.post("/tasks", payload);
+
+    console.log("SUCCESS:", res.data);
+
+    navigation.goBack();
+
+  } catch (err) {
+    console.log("ERROR:", err?.response?.data);
+  }
+};
+  // ✅ PROGRESS
+  const completed = tasks.filter(t => t.isCompleted).length;
+  const progress = tasks.length
+    ? (completed / tasks.length) * 100
+    : 0;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -47,9 +102,9 @@ export default function HomeScreen({ navigation }) {
         {/* HEADER */}
         <View style={styles.header}>
           <View>
-<Text style={styles.title}>
-  Good Morning, {user?.name || "Guest"}
-</Text>
+            <Text style={styles.title}>
+              Good Morning, {user?.name || "Guest"}
+            </Text>
             <Text style={styles.subtitle}>
               Small steps today create big dreams tomorrow.
             </Text>
@@ -61,32 +116,32 @@ export default function HomeScreen({ navigation }) {
           />
         </View>
 
-{/* ENERGY */}
-<View style={styles.inlineRow}>
-  <Text style={styles.label}>Energy</Text>
+        {/* ENERGY */}
+        <View style={styles.inlineRow}>
+          <Text style={styles.label}>Energy</Text>
 
-  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-    {energyLevels.map(item => {
-      const active = energy === item;
-      return (
-        <TouchableOpacity
-          key={item}
-          onPress={() => {
-            setEnergy(item);
-            setShowMood(true); // 👈 trigger full UI
-          }}
-          style={[styles.pill, active && styles.pillActive]}
-        >
-          <Text style={[styles.pillText, active && styles.pillTextActive]}>
-            {item}
-          </Text>
-        </TouchableOpacity>
-      );
-    })}
-  </ScrollView>
-</View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {energyLevels.map(item => {
+              const active = energy === item;
+              return (
+                <TouchableOpacity
+                  key={item}
+                  onPress={() => {
+                    setEnergy(item);
+                    setShowMood(true);
+                  }}
+                  style={[styles.pill, active && styles.pillActive]}
+                >
+                  <Text style={[styles.pillText, active && styles.pillTextActive]}>
+                    {item}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
 
-        {/* MOOD (SHOW AFTER ENERGY SELECT) */}
+        {/* MOOD */}
         {showMood && (
           <View style={styles.inlineRow}>
             <Text style={styles.label}>Mood</Text>
@@ -109,141 +164,143 @@ export default function HomeScreen({ navigation }) {
             </ScrollView>
           </View>
         )}
-         {/* TODAY FOCUS */}
-{showMood && (
-  <View style={styles.section}>
 
+        {/* TODAY FOCUS */}
+        {showMood && (
+          <View style={styles.section}>
+            <View style={styles.progressCard}>
+              <Text style={{ color: '#F35539', fontWeight: '600' }}>
+                Today's Focus
+              </Text>
 
-    <View style={styles.progressCard}>
-        <Text style={{ color: '#F35539', fontWeight: '600' }}>
-          Today's Focus
-       
-      </Text>
-          <Text style={styles.heading}> Build Jarvis</Text>
-    
-      <Text style={{color: '#8A7B78' }}>
-        3 tasks scheduled today
-      </Text>
-         <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: '191.75' }]} />
+              <Text style={styles.heading}>
+                {tasks[0]?.title || "No Task"}
+              </Text>
+
+              <Text style={{ color: '#8A7B78' }}>
+                {tasks.length} tasks scheduled today
+              </Text>
+
+              <View style={styles.progressBar}>
+                <View style={[styles.progressFill, { width: `${progress}%` }]} />
+              </View>
+
+<TouchableOpacity
+  style={styles.focusBtn}
+  onPress={() => navigation.navigate("Dreams")}
+>
+                <Text style={styles.focusBtnText}>View Dream</Text>
+              </TouchableOpacity>
             </View>
+          </View>
+        )}
 
-      <TouchableOpacity style={styles.focusBtn}>
-        <Text style={styles.focusBtnText}>View Dream</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-)}
-
-        {/* TASKS */}
+        {/* 🔥 TASK LIST WITH CLICK */}
         <View style={styles.section}>
           <Text style={styles.heading}>Today's Tasks</Text>
-          {/* DREAM TASKS */}
-<View style={styles.subSection}>
-  <Text style={styles.subHeading}>Dream Tasks</Text>
 
-  {[
-    { title: 'Build login API' },
-    { title: 'Design marketplace database' },
-  ].map((item, i) => (
-    <View key={i} style={styles.taskCardNew}>
-      
-      {/* Checkbox */}
-      <View style={styles.checkboxOutline} />
+          {tasks.map(item => (
+            <View key={item._id} style={styles.taskCardNew}>
 
-      {/* Content */}
-      <View style={styles.taskContent}>
-        <Text style={styles.taskTitle}>{item.title}</Text>
-
-        {/* Tag */}
-        <View style={styles.tagJarvis}>
-          <Text style={styles.tagJarvisText}>JARVIS</Text>
-        </View>
-      </View>
-    </View>
-  ))}
-</View>
-
-          {tasks.map((item, i) => {
-            const isDone = i === 2;
-
-            return (
-              <View key={item.id} style={styles.taskCard}>
-                {isDone ? (
+              {/* CLICKABLE CHECKBOX */}
+              <TouchableOpacity
+                onPress={() => toggleTask(item._id, item.isCompleted)}
+              >
+                {item.isCompleted ? (
                   <View style={styles.checkboxDone}>
                     <Feather name="check" size={14} color="#fff" />
                   </View>
                 ) : (
-                  <View style={styles.checkbox} />
+                  <View style={styles.checkboxOutline} />
                 )}
+              </TouchableOpacity>
 
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.taskText, isDone && styles.taskDone]}>
-                    {item.title}
+              {/* CONTENT */}
+              <View style={styles.taskContent}>
+                <Text
+                  style={[
+                    styles.taskTitle,
+                    item.isCompleted && {
+                      textDecorationLine: 'line-through',
+                      color: '#8A7B78',
+                    },
+                  ]}
+                >
+                  {item.title}
+                </Text>
+
+                <View style={styles.tagJarvis}>
+                  <Text style={styles.tagJarvisText}>
+                    {item.priority?.toUpperCase()}
                   </Text>
-
-                  <View
-                    style={[
-                      styles.tag,
-                      {
-                        backgroundColor:
-                          item.color === '#8A7B78'
-                            ? '#F3E9E6'
-                            : item.color + '1A',
-                      },
-                    ]}
-                  >
-                    <Text style={[styles.tagText, { color: item.color }]}>
-                      {item.tag}
-                    </Text>
-                  </View>
                 </View>
               </View>
-            );
-          })}
+            </View>
+          ))}
         </View>
 
-        {/* PROGRESS */}
-        <View style={styles.section}>
-          <Text style={styles.heading}>Dream Progress</Text>
+        {/* 🔥 DREAM PROGRESS */}
+<View style={styles.dreamSection}>
 
-          <View style={styles.progressCard}>
-            <View style={styles.progressTop}>
-              <Text>Dream: Build Jarvis</Text>
-              <Text style={styles.percent}>32%</Text>
-            </View>
+  <Text style={styles.dreamHeading}>Dream Progress</Text>
 
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: '32%' }]} />
-            </View>
+  <View style={styles.dreamCard}>
 
-            <Text style={styles.progressText}>
-              Keep going. Every task brings you closer.
-            </Text>
-          </View>
-        </View>
+    {/* TOP ROW */}
+    <View style={styles.dreamRow}>
+      <Text style={styles.dreamTitle}>
+        {tasks[0]?.title || "No Active Dream"}
+      </Text>
+
+      <Text style={styles.dreamPercent}>
+        {Math.round(progress)}%
+      </Text>
+    </View>
+
+    {/* PROGRESS BAR */}
+    <View style={styles.progressBg}>
+      <View
+        style={[
+          styles.progressFill,
+          { width: `${progress}%` },
+        ]}
+      />
+    </View>
+
+    {/* FOOTER TEXT */}
+    <Text style={styles.dreamSub}>
+      Consistency builds extraordinary results.
+    </Text>
+
+  </View>
+</View>
 
         {/* QUICK CAPTURE */}
-<View>
-  <QuickCapture
+<QuickCapture
   onPressItem={(item) => {
-    console.log(item);
+    switch (item.title) {
 
-    if (item.title === "Add Task") {
-      navigation.navigate("TaskScreen");
-    } else if (item.title === "Add Idea") {
-      navigation.navigate("IdeaScreen");
-    } else if (item.title === "Voice Note") {
-      navigation.navigate("VoiceScreen");
+      case "Add Task":
+        navigation.navigate("Task");
+        break;
+
+      case "Add Idea":
+        navigation.getParent()?.navigate("IdeaScreen"); // ✅ FIX
+        break;
+
+      case "Voice Note":
+        navigation.getParent()?.navigate("VoiceScreen"); // ✅ FIX
+        break;
+
+      default:
+        console.log("Unknown action");
     }
   }}
 />
-</View>
 
       </ScrollView>
 
-      {/* FAB */}
-<FAB onPress={() => console.log("FAB Clicked")} />
+      <FAB onPress={() => console.log("FAB Clicked")} />
     </SafeAreaView>
   );
 }
@@ -255,72 +312,72 @@ const styles = StyleSheet.create({
   },
 
   block: {
-  marginTop: 16,
-},
+    marginTop: 16,
+  },
 
-inlineRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  marginTop: 20,
-  marginBottom: 10,
-  marginHorizontal: 20,
-},
+  inlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 10,
+    marginHorizontal: 20,
+  },
 
-pillScroll: {
-  flexDirection: 'row',
-  gap: 10,
-  paddingLeft: 10,
-},
-blockLabel: {
-  width: 60, 
-  fontSize: 13,
-  fontWeight: '600',
-  color: '#2E2626',
-},
+  pillScroll: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingLeft: 10,
+  },
+  blockLabel: {
+    width: 60,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#2E2626',
+  },
 
-pillRow: {
-  flexDirection: 'row',
-  flexWrap: 'wrap',
-  gap: 10,
-  flex: 1,
-},
+  pillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    flex: 1,
+  },
 
-pill: {
-  paddingHorizontal: 14,
-  paddingVertical: 6, 
-  backgroundColor: '#FFFFFF',
-  borderRadius: 20,
-  borderWidth: 1,
-  borderColor: 'rgba(0,0,0,0.08)',
+  pill: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
 
-  // subtle shadow
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.05,
-  shadowRadius: 6,
-  elevation: 2,
-},
+    // subtle shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
 
-pillActive: {
-  backgroundColor: '#F35539',
-  borderColor: '#F35539',
+  pillActive: {
+    backgroundColor: '#F35539',
+    borderColor: '#F35539',
 
-  shadowColor: '#F35539',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.25,
-  shadowRadius: 10,
-  elevation: 4,
-},
+    shadowColor: '#F35539',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 4,
+  },
 
-pillText: {
-  fontSize: 12,
-  fontWeight: '600',
-  color: '#2E2626',
-},
+  pillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2E2626',
+  },
 
-pillTextActive: {
-  color: '#FFFFFF',
-},
+  pillTextActive: {
+    color: '#FFFFFF',
+  },
 
   header: {
     flexDirection: 'row',
@@ -329,7 +386,6 @@ pillTextActive: {
     width: '90%',
     padding: 20,
     gap: 1,
-  
   },
 
   title: {
@@ -354,7 +410,7 @@ pillTextActive: {
     width: 48,
     height: 48,
     borderRadius: 24,
-   
+
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -374,61 +430,59 @@ pillTextActive: {
     marginBottom: 10,
   },
 
-row: {
-  flexDirection: 'row',
-  flexWrap: 'wrap',
-  gap: 10,
-},
+  row: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
 
-energyBtn: {
-  paddingHorizontal: 14,
-  paddingVertical: 6, // 👈 EXACT FIGMA
-  backgroundColor: '#FFFFFF',
-  borderRadius: 20,
-  borderWidth: 1,
-  borderColor: 'rgba(0,0,0,0.08)',
+  energyBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 6, // 👈 EXACT FIGMA
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
 
-  // subtle shadow
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.05,
-  shadowRadius: 6,
-  elevation: 2,
-},
+    // subtle shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
 
-activeBtn: {
-  backgroundColor: '#F35539',
-  borderColor: '#F35539',
+  activeBtn: {
+    backgroundColor: '#F35539',
+    borderColor: '#F35539',
 
-  shadowColor: '#F35539',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.25,
-  shadowRadius: 10,
-  elevation: 4,
-},
+    shadowColor: '#F35539',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 4,
+  },
 
-energyText: {
-  fontSize: 12,
-  fontWeight: '600',
-  color: '#2E2626',
-},
+  energyText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2E2626',
+  },
 
-activeText: {
-  color: '#FFFFFF',
-},
+  activeText: {
+    color: '#FFFFFF',
+  },
 
   headingTask: {
     fontSize: 12,
     fontWeight: '600',
     color: '#F35539',
     marginBottom: 10,
-
   },
   heading: {
     fontSize: 18,
     fontWeight: '700',
     marginBottom: 25,
-
   },
 
   subHeading: {
@@ -479,71 +533,71 @@ activeText: {
     fontWeight: '600',
   },
 
-taskCard: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  padding: 16,
-  backgroundColor: '#FFFFFF',
-  borderRadius: 10,
-  marginTop: 10,
+  taskCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    marginTop: 10,
 
-  // soft shadow
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.05,
-  shadowRadius: 12,
-  elevation: 3,
-},
+    // soft shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+  },
 
-checkbox: {
-  width: 22,
-  height: 22,
-  borderWidth: 2,
-  borderColor: '#8A7B78',
-  borderRadius: 6,
-  marginRight: 12,
-},
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderWidth: 2,
+    borderColor: '#8A7B78',
+    borderRadius: 6,
+    marginRight: 12,
+  },
 
-checkboxDone: {
-  width: 22,
-  height: 22,
-  backgroundColor: '#F35539',
-  borderRadius: 6,
-  justifyContent: 'center',
-  alignItems: 'center',
-  marginRight: 12,
-},
+  checkboxDone: {
+    width: 22,
+    height: 22,
+    backgroundColor: '#F35539',
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
 
-taskText: {
-  fontSize: 15,
-  fontWeight: '600',
-  color: '#2E2626',
-},
-taskDone: {
-  textDecorationLine: 'line-through',
-  color: '#8A7B78',
-},
+  taskText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2E2626',
+  },
+  taskDone: {
+    textDecorationLine: 'line-through',
+    color: '#8A7B78',
+  },
 
-subHeading: {
-  marginTop: 16,
-  fontSize: 14,
-  fontWeight: '600',
-  color: '#8A7B78',
-},
+  subHeading: {
+    marginTop: 16,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#8A7B78',
+  },
 
-tag: {
-  marginTop: 6,
-  paddingHorizontal: 8,
-  paddingVertical: 2,
-  borderRadius: 12,
-  alignSelf: 'flex-start',
-},
+  tag: {
+    marginTop: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
 
-tagText: {
-  fontSize: 11,
-  fontWeight: '600',
-  textTransform: 'uppercase',
-},
+  tagText: {
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
 
   progressCard: {
     backgroundColor: '#fff',
@@ -578,63 +632,123 @@ tagText: {
     marginTop: 10,
     color: '#0f0e0e',
   },
-subSection: {
-  marginTop: 16,
+  subSection: {
+    marginTop: 16,
+  },
+
+  subHeading: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#8A7B78',
+    marginBottom: 8,
+  },
+
+  taskCardNew: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    gap: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    marginBottom: 12,
+
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+
+  checkboxOutline: {
+    width: 22,
+    height: 22,
+    borderWidth: 2,
+    borderColor: '#8A7B78',
+    borderRadius: 6,
+  },
+
+  taskContent: {
+    flex: 1,
+  },
+
+  taskTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2E2626',
+  },
+
+  tagJarvis: {
+    marginTop: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    backgroundColor: 'rgba(243, 85, 57, 0.1)',
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+
+  tagJarvisText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#F35539',
+  },
+
+  dreamSection: {
+  paddingHorizontal: 20,
+  marginTop: 20,
 },
 
-subHeading: {
-  fontSize: 14,
-  fontWeight: '600',
-  color: '#8A7B78',
-  marginBottom: 8,
+dreamHeading: {
+  fontSize: 18,
+  fontWeight: "700",
+  color: "#2E2626",
+  marginBottom: 10,
 },
 
-taskCardNew: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  padding: 16,
-  gap: 12,
-  backgroundColor: '#FFFFFF',
-  borderRadius: 8,
-  marginBottom: 12,
-
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.03,
-  shadowRadius: 12,
-  elevation: 2,
-},
-
-checkboxOutline: {
-  width: 22,
-  height: 22,
-  borderWidth: 2,
-  borderColor: '#8A7B78',
-  borderRadius: 6,
-},
-
-taskContent: {
-  flex: 1,
-},
-
-taskTitle: {
-  fontSize: 15,
-  fontWeight: '600',
-  color: '#2E2626',
-},
-
-tagJarvis: {
-  marginTop: 4,
-  paddingHorizontal: 8,
-  paddingVertical: 2,
-  backgroundColor: 'rgba(243, 85, 57, 0.1)',
+dreamCard: {
+  backgroundColor: "#fff",
   borderRadius: 12,
-  alignSelf: 'flex-start',
+  padding: 16,
+  shadowColor: "#000",
+  shadowOpacity: 0.04,
+  shadowRadius: 16,
+  elevation: 3,
 },
 
-tagJarvisText: {
-  fontSize: 11,
-  fontWeight: '600',
-  color: '#F35539',
+dreamRow: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: 10,
+},
+
+dreamTitle: {
+  fontSize: 16,
+  fontWeight: "700",
+  color: "#2E2626",
+},
+
+dreamPercent: {
+  fontSize: 16,
+  fontWeight: "700",
+  color: "#F35539",
+},
+
+progressBg: {
+  height: 8,
+  backgroundColor: "#F3E9E6",
+  borderRadius: 8,
+  overflow: "hidden",
+  marginBottom: 10,
+},
+
+progressFill: {
+  height: "100%",
+  backgroundColor: "#F35539",
+  borderRadius: 8,
+},
+
+dreamSub: {
+  fontSize: 13,
+  color: "#8A7B78",
 },
 });

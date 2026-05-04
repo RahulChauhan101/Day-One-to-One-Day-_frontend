@@ -16,7 +16,17 @@ import SplashScreen from '../screens/SplashScreen';
 import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
 
+import TaskScreen from "../components/Capture/TaskScreen";
+import IdeaScreen from "../components/Capture/IdeaScreen";
+import VoiceScreen from "../components/Capture/VoiceScreen";
+
 import MainTabNavigator from './MainTabNavigator';
+
+
+
+
+
+
 
 const Stack = createNativeStackNavigator();
 
@@ -45,6 +55,10 @@ export default function AppNavigator() {
       <Stack.Screen name="Next" component={Next} />
       <Stack.Screen name="Goal" component={Goal} />
 
+      
+      <Stack.Screen name="Task" component={TaskScreen} />
+<Stack.Screen name="IdeaScreen" component={IdeaScreen} />
+<Stack.Screen name="VoiceScreen" component={VoiceScreen} />
       {/* MAIN */}
       <Stack.Screen name="MainApp" component={MainTabNavigator} />
     </Stack.Navigator>
