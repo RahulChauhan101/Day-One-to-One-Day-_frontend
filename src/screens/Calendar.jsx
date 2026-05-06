@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,9 +7,49 @@ import {
   ScrollView,
 } from "react-native";
 import Feather from "@react-native-vector-icons/feather";
+
 import FAB from "../components/FAB";
+import api from "../services/api";
 
 export default function Calender() {
+
+  const [dreams, setDreams] = useState([]);
+  const [tasks, setTasks] = useState([]);
+
+  // FETCH DREAMS
+  useEffect(() => {
+    fetchDreams();
+    fetchTasks();
+  }, []);
+
+  const fetchDreams = async () => {
+    try {
+
+      const res = await api.get("/dreams");
+
+      console.log("DREAM API:", res.data);
+
+      setDreams(res.data.dreams || []);
+
+    } catch (err) {
+      console.log("FETCH ERROR:", err);
+    }
+  };
+
+  const fetchTasks = async () => {
+  try {
+
+    const res = await api.get("/tasks");
+
+    console.log("TASKS:", res.data);
+
+    setTasks(res.data.tasks || []);
+
+  } catch (err) {
+    console.log("TASK ERROR:", err);
+  }
+};
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -18,6 +58,7 @@ export default function Calender() {
         <View style={styles.header}>
           <View>
             <Text style={styles.title}>Life Insights</Text>
+
             <Text style={styles.subtitle}>
               Your progress after 21 days of consistency.
             </Text>
@@ -38,49 +79,106 @@ export default function Calender() {
             </View>
 
             <Text style={styles.desc}>
-              You completed tasks on 16 out of the last 21 days. Keep it up!
+              You completed tasks on 16 out of the last 21 days.
+              Keep it up!
             </Text>
           </View>
         </View>
 
         {/* AI INSIGHT */}
         <View style={styles.aiCard}>
+
           <View style={styles.row}>
-            <Feather name="zap" size={18} color="#F35539" />
-            <Text style={styles.aiTitle}>AI Insight</Text>
+            <Feather
+              name="zap"
+              size={18}
+              color="#F35539"
+            />
+
+            <Text style={styles.aiTitle}>
+              AI Insight
+            </Text>
           </View>
 
           <Text style={styles.aiText}>
-            Your productivity peaks between 9 AM and 12 PM.
+            Your productivity peaks between
+            9 AM and 12 PM.
           </Text>
+
         </View>
 
         {/* DREAM PROGRESS */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Dream Progress</Text>
 
-          <View style={styles.progressRow}>
-            <Text>Build Jarvis</Text>
-            <Text style={styles.percent}>32%</Text>
-          </View>
-          <View style={styles.barBg}>
-            <View style={[styles.barFill, { width: "32%" }]} />
-          </View>
+          <Text style={styles.cardTitle}>
+            Dream Progress
+          </Text>
 
-          <View style={[styles.progressRow, { marginTop: 10 }]}>
-            <Text>Dream Villa Kailash</Text>
-            <Text style={styles.percent}>8%</Text>
-          </View>
-          <View style={styles.barBg}>
-            <View style={[styles.barFill, { width: "8%" }]} />
-          </View>
+          {dreams.length > 0 ? (
+
+            dreams.map((item) => (
+
+              <View
+                key={item._id}
+                style={{ marginBottom: 14 }}
+              >
+
+                <View style={styles.progressRow}>
+
+                  <Text style={styles.dreamTitle}>
+                    {item.title}
+                  </Text>
+
+                  <Text style={styles.percent}>
+                    {item.progress || 0}%
+                  </Text>
+
+                </View>
+
+                <View style={styles.barBg}>
+
+                  <View
+                    style={[
+                      styles.barFill,
+                      {
+                        width: `${item.progress || 0}%`,
+                      },
+                    ]}
+                  />
+
+                </View>
+
+                <Text style={styles.subText}>
+                  {item.subTitle}
+                </Text>
+
+                <Text style={styles.statusText}>
+                  {item.status}
+                </Text>
+
+              </View>
+
+            ))
+
+          ) : (
+
+            <Text style={{ color: "#8A7F7D" }}>
+              No dreams found
+            </Text>
+
+          )}
+
         </View>
 
         {/* MOST PRODUCTIVE */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Most Productive Days</Text>
+
+          <Text style={styles.cardTitle}>
+            Most Productive Days
+          </Text>
 
           <View style={styles.productiveContainer}>
+
             {[
               { d: "Mon", v: 8 },
               { d: "Tue", v: 12 },
@@ -88,15 +186,22 @@ export default function Calender() {
               { d: "Thu", v: 5 },
               { d: "Fri", v: 7 },
             ].map((item, i) => {
+
               const isActive = item.v === 12;
 
               return (
-                <View key={i} style={styles.productiveItem}>
+                <View
+                  key={i}
+                  style={styles.productiveItem}
+                >
+
                   <View
                     style={{
                       width: 6,
                       height: item.v * 4,
-                      backgroundColor: isActive ? "#F35539" : "#EADFD8",
+                      backgroundColor: isActive
+                        ? "#F35539"
+                        : "#EADFD8",
                       borderRadius: 3,
                     }}
                   />
@@ -104,91 +209,206 @@ export default function Calender() {
                   <Text
                     style={[
                       styles.productiveValue,
-                      isActive && { color: "#F35539" },
+                      isActive && {
+                        color: "#F35539",
+                      },
                     ]}
                   >
                     {item.v}
                   </Text>
 
-                  <Text style={styles.productiveDay}>{item.d}</Text>
+                  <Text style={styles.productiveDay}>
+                    {item.d}
+                  </Text>
+
                 </View>
               );
             })}
-          </View>
-        </View>
-
-        {/* FOCUS */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Focus Distribution</Text>
-
-          <View style={styles.focusContainer}>
-
-
-            <View style={styles.legendBox}>
-              <View style={styles.legendRow}>
-                <View style={[styles.dot, { backgroundColor: "#F35539" }]} />
-                <Text style={styles.legendText}>Dream tasks (45%)</Text>
-              </View>
-
-              <View style={styles.legendRow}>
-                <View style={[styles.dot, { backgroundColor: "#4A90E2" }]} />
-                <Text style={styles.legendText}>Work tasks (30%)</Text>
-              </View>
-
-              <View style={styles.legendRow}>
-                <View style={[styles.dot, { backgroundColor: "#F5A623" }]} />
-                <Text style={styles.legendText}>Personal tasks (25%)</Text>
-              </View>
-            </View>
 
           </View>
         </View>
 
-        {/* ENERGY GRAPH */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Energy vs Productivity</Text>
+{/* FOCUS */}
+<View style={styles.card}>
 
-          <View style={styles.chart}>
-            {[
-              { h: 30, c: "#F5EDEE" },
-              { h: 50, c: "#2E2626", o: 0.6 },
-              { h: 40, c: "#F5EDEE" },
-              { h: 80, c: "#F35539", o: 0.9 },
-              { h: 60, c: "#F5EDEE" },
-              { h: 45, c: "#2E2626", o: 0.6 },
-              { h: 90, c: "#F5EDEE" },
-              { h: 70, c: "#F35539", o: 0.9 },
-              { h: 55, c: "#F5EDEE" },
-              { h: 85, c: "#2E2626", o: 0.6 },
-            ].map((bar, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.newBar,
-                  {
-                    height: bar.h,
-                    backgroundColor: bar.c,
-                    opacity: bar.o || 1,
-                  },
-                ]}
-              />
-            ))}
+  <Text style={styles.cardTitle}>
+    Focus Distribution
+  </Text>
+
+  <View style={styles.focusContainer}>
+
+    <View style={styles.legendBox}>
+
+      {/* HIGH */}
+      <View style={styles.legendRow}>
+
+        <View
+          style={[
+            styles.dot,
+            { backgroundColor: "#FF3B30" },
+          ]}
+        />
+
+        <Text style={styles.legendText}>
+          High Priority (
+          {
+            tasks.filter(
+              (t) => t.priority === "high"
+            ).length
+          }
+          )
+        </Text>
+
+      </View>
+
+      {/* MEDIUM */}
+      <View style={styles.legendRow}>
+
+        <View
+          style={[
+            styles.dot,
+            { backgroundColor: "#F5A623" },
+          ]}
+        />
+
+        <Text style={styles.legendText}>
+          Medium Priority (
+          {
+            tasks.filter(
+              (t) => t.priority === "medium"
+            ).length
+          }
+          )
+        </Text>
+
+      </View>
+
+      {/* LOW */}
+      <View style={styles.legendRow}>
+
+        <View
+          style={[
+            styles.dot,
+            { backgroundColor: "#34C759" },
+          ]}
+        />
+
+        <Text style={styles.legendText}>
+          Low Priority (
+          {
+            tasks.filter(
+              (t) => t.priority === "low"
+            ).length
+          }
+          )
+        </Text>
+
+      </View>
+
+    </View>
+
+  </View>
+
+</View>
+
+{/* ENERGY GRAPH */}
+<View style={styles.card}>
+
+  <Text style={styles.cardTitle}>
+    Energy vs Productivity
+  </Text>
+
+  <View style={styles.chart}>
+
+    {tasks.length > 0 ? (
+
+      tasks.map((task) => {
+
+        const barHeight =
+          task.isCompleted
+            ? 90
+            : task.priority === "high"
+            ? 80
+            : task.priority === "medium"
+            ? 60
+            : 40;
+
+        return (
+
+          <View
+            key={task._id}
+            style={styles.taskBarContainer}
+          >
+
+       <Text style={styles.priorityText}>
+    {task.priority}
+  </Text>
+       
+
+<View
+  style={[
+    styles.newBar,
+    {
+      height: barHeight,
+
+      backgroundColor:
+        task.priority === "high"
+          ? "#FF3B30"
+          : task.priority === "medium"
+          ? "#F5A623"
+          : "#34C759",
+
+      width: 28,
+      borderRadius: 10,
+
+      borderWidth: 2,
+      borderColor: "#FFFFFF",
+
+      marginTop: 14,
+    },
+  ]}
+/>
+
+            <Text
+              numberOfLines={1}
+              style={styles.taskLabel}
+            >
+              {task.title}
+            </Text>
+
           </View>
 
-          <Text style={styles.smallText}>
-            You complete more tasks on high-energy days.
-          </Text>
-        </View>
+        );
+      })
 
+    ) : (
+
+      <Text>No task data</Text>
+
+    )}
+
+  </View>
+
+  <Text style={styles.smallText}>
+    You complete more tasks on high-energy days.
+  </Text>
+
+</View>
       </ScrollView>
 
       {/* FAB */}
-<FAB onPress={() => console.log("FAB Clicked")} />
+      <FAB onPress={() => console.log("FAB Clicked")} />
+
     </SafeAreaView>
   );
 }
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFF5EC" },
+
+  container: {
+    flex: 1,
+    backgroundColor: "#FFF5EC",
+  },
 
   header: {
     flexDirection: "row",
@@ -196,8 +416,14 @@ const styles = StyleSheet.create({
     padding: 20,
   },
 
-  title: { fontSize: 28, fontWeight: "700" },
-  subtitle: { color: "#8A7F7D" },
+  title: {
+    fontSize: 28,
+    fontWeight: "700",
+  },
+
+  subtitle: {
+    color: "#8A7F7D",
+  },
 
   iconBox: {
     width: 40,
@@ -216,9 +442,15 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
 
-  cardTitle: { fontWeight: "700", marginBottom: 10 },
+  cardTitle: {
+    fontWeight: "700",
+    marginBottom: 10,
+  },
 
-  row: { flexDirection: "row", gap: 10 },
+  row: {
+    flexDirection: "row",
+    gap: 10,
+  },
 
   circle: {
     width: 60,
@@ -229,27 +461,54 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  score: { color: "#F35539", fontWeight: "700" },
-  desc: { flex: 1, color: "#8A7F7D" },
+  score: {
+    color: "#F35539",
+    fontWeight: "700",
+  },
+
+  desc: {
+    flex: 1,
+    color: "#8A7F7D",
+  },
 
   progressRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    marginBottom: 6,
   },
 
-  percent: { color: "#F35539" },
+  dreamTitle: {
+    fontWeight: "600",
+  },
+
+  percent: {
+    color: "#F35539",
+    fontWeight: "700",
+  },
 
   barBg: {
     height: 6,
     backgroundColor: "#F5EDEE",
     borderRadius: 4,
-    marginTop: 4,
   },
 
   barFill: {
     height: 6,
     backgroundColor: "#F35539",
     borderRadius: 4,
+  },
+
+  subText: {
+    marginTop: 6,
+    color: "#8A7F7D",
+    fontSize: 12,
+  },
+
+  statusText: {
+    marginTop: 4,
+    color: "#F35539",
+    fontSize: 12,
+    fontWeight: "600",
   },
 
   productiveContainer: {
@@ -283,8 +542,10 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
 
-
-  legendBox: { flex: 1, gap: 12 },
+  legendBox: {
+    flex: 1,
+    gap: 12,
+  },
 
   legendRow: {
     flexDirection: "row",
@@ -292,7 +553,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 
-  legendText: { fontSize: 13, color: "#8A7F7D" },
+  legendText: {
+    fontSize: 13,
+    color: "#8A7F7D",
+  },
 
   dot: {
     width: 12,
@@ -329,7 +593,50 @@ const styles = StyleSheet.create({
     borderColor: "#F35539",
   },
 
-  aiTitle: { color: "#F35539", fontWeight: "700" },
-  aiText: { marginTop: 8 },
+  aiTitle: {
+    color: "#F35539",
+    fontWeight: "700",
+  },
+
+  aiText: {
+    marginTop: 8,
+  },
+
+taskBarContainer: {
+  alignItems: "center",
+  width: 60,
+  
+},
+
+priorityText: {
+  fontSize: 10,
+  fontWeight: "700",
+  textTransform: "capitalize",
+
+  color: "#F35539",
+  marginBottom: 6,
+},
+taskBarContainer: {
+  alignItems: "center",
+  width: 70,
+  justifyContent: "flex-end",
+},
+
+taskLabel: {
+  marginTop: 10,
+  fontSize: 11,
+  color: "#8A7F7D",
+  textAlign: "center",
+  fontWeight: "600",
+},
+
+newBar: {
+  borderTopLeftRadius: 10,
+  borderTopRightRadius: 10,
+  shadowColor: "#000",
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+  elevation: 3,
+},
 
 });
