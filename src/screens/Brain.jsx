@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigation } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -15,6 +16,7 @@ import Feather from "@react-native-vector-icons/feather";
 import API from "../services/api";
 
 export default function Brain() {
+  const navigation = useNavigation();
   const [idea, setIdea] = useState("");
   const [ideas, setIdeas] = useState([]);
   const [search, setSearch] = useState("");
@@ -170,12 +172,12 @@ export default function Brain() {
 
             {/* Voice removed */}
             <TouchableOpacity
-              style={styles.voiceBtn}
-              onPress={() => Alert.alert("Voice coming soon")}
-            >
-              <Feather name="mic" size={16} color="#F35539" />
-              <Text style={styles.voiceText}>Voice</Text>
-            </TouchableOpacity>
+  style={styles.voiceBtn}
+  onPress={() => navigation.navigate("VoiceScreen")}
+>
+  <Feather name="mic" size={16} color="#F35539" />
+  <Text style={styles.voiceText}>Voice</Text>
+</TouchableOpacity>
           </View>
         </View>
 

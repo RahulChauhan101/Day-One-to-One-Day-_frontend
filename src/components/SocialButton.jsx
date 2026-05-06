@@ -1,11 +1,12 @@
 import React from "react";
 import { TouchableOpacity, Text, StyleSheet } from "react-native";
-import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
+// import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
+import Icon from 'react-native-vector-icons/FontAwesome5';
 
 const SocialButton = ({ icon, text, onPress }) => {
   return (
     <TouchableOpacity style={styles.socialBtn} onPress={onPress}>
-      <FontAwesome5 name={icon} size={18} color="#000" />
+      <Icon name={icon} size={18} color="#000" />
       <Text style={styles.socialText}>{text}</Text>
     </TouchableOpacity>
   );

@@ -7,37 +7,48 @@ import { getToken } from "../utils/storage";
 export default function SplashScreen({ navigation }) {
   const [progress, setProgress] = useState(0);
 
-  useEffect(() => {
-    let mounted = true;
+useEffect(() => {
+  let mounted = true;
 
-    let interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          return 100;
-        }
-        return prev + 5;
-      });
-    }, 100);
+  let interval = setInterval(() => {
+    setProgress((prev) => {
+      if (prev >= 100) {
+        clearInterval(interval);
+        return 100;
+      }
+      return prev + 5;
+    });
+  }, 100);
 
-    const init = async () => {
+  const init = async () => {
+    try {
+      console.log("SPLASH START");
+
       const token = await getToken();
+
+      console.log("TOKEN:", token);
 
       setTimeout(async () => {
         if (!mounted) return;
 
+        console.log("NAVIGATING...");
+
         await RNBootSplash.hide({ fade: true });
-        navigation.replace(token ? "MainApp" : "Onboarding1");
+
+        navigation.replace("Onboarding1");
       }, 3000);
-    };
+    } catch (error) {
+      console.log("SPLASH ERROR:", error);
+    }
+  };
 
-    init();
+  init();
 
-    return () => {
-      mounted = false;
-      clearInterval(interval);
-    };
-  }, []);
+  return () => {
+    mounted = false;
+    clearInterval(interval);
+  };
+}, []);
 
   return (
     <SafeAreaView style={styles.container}>

@@ -65,6 +65,7 @@ export default function LoginScreen({ navigation }) {
     } catch (err) {
       console.log("LOGIN ERROR:", err);
       console.log("URL:", "/auth/login");
+      console.log(email, password);
       Alert.alert("Error", "Invalid credentials or server error");
     }
   };
