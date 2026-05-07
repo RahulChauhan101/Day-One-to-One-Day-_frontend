@@ -13,6 +13,7 @@ import {
   ScrollView,
 } from "react-native";
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import SocialButton from "../components/SocialButton";
 import Feather from "@react-native-vector-icons/feather";
 
